@@ -37,6 +37,7 @@ class Server
 		const std::string &getServerName() const;
 		unsigned short	   getPort() const;
 		int				   getSocketFd() const;
+		std::map<int, Client> &getClients();
 
 		std::map<std::string, Location> &getLocations();
 		int Server::acceptClient(int server_fd, int &fd_max);

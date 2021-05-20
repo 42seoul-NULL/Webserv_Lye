@@ -32,13 +32,21 @@ Webserver& Webserver::operator=(const Webserver &src)
 	return (*this);
 }
 
-void	Webserver::clear_connected_socket(int connected_socket_fd)
+void	Webserver::disconnect_client(Client &client)
 {
-	FT_FD_CLR(connected_socket_fd, &(this->reads));
-	FT_FD_CLR(connected_socket_fd, &(this->writes));
-	FT_FD_CLR(connected_socket_fd, &(this->errors));
-	close(connected_socket_fd);
-	this->clients.erase(this->clients.find(connected_socket_fd));
+	int client_socket_fd = client.getSocketFd();
+
+	FT_FD_CLR(client_socket_fd, &(this->reads));
+	FT_FD_CLR(client_socket_fd, &(this->writes));
+	FT_FD_CLR(client_socket_fd, &(this->errors));
+	close(client_socket_fd);
+	
+	Server *server = client.getServer();
+	server->getClients().erase(client_socket_fd);
+
+	delete Manager::getInstance()->getFDTable()[client_socket_fd];
+	Manager::getInstance()->getFDTable()[client_socket_fd] = NULL;
+
 	return ;
 }
 
@@ -142,49 +150,68 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 		FDType *fd = NULL;
 		for (int i = 0; i <= this->fd_max; i++)
 		{
-			fd = Manager::getInstance()->getFDTable[i];
+			fd = Manager::getInstance()->getFDTable()[i];
 			if (fd == NULL)
 				continue ;
+			
+			//if  (ft_get_time() - ) // 타임아웃 체크
+					// 클라이언트 timeout disconnect
+
 			if (FT_FD_ISSET(i, &cpy_reads))
 			{
 				if (fd->getType() == SERVER_FDTYPE)
 				{
-					int client_socket = this->servers[i].acceptClient(i, this->fd_max);
-					FT_FD_SET(client_socket, &(this->reads));
-					FT_FD_SET(client_socket, &(this->writes));
-					FT_FD_SET(client_socket, &(this->errors));
+					int client_socket_fd = this->servers[i].acceptClient(i, this->fd_max);
+					FT_FD_SET(client_socket_fd, &(this->reads));
+					FT_FD_SET(client_socket_fd, &(this->writes));
+					FT_FD_SET(client_socket_fd, &(this->errors));
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
-					client_fd->to_client->readRequest();
+					if (client_fd->to_client->readRequest() == DISCONNECT_CLIENT)
+						disconnect_client(*(client_fd->to_client));
 
-					
-					// response
-					// uri 확장자 체크 -> cgi call -> makeResponse()
-					// makeResponse()
+					if (client_fd->to_client->getStatus() == REQUEST_COMPLETE)
+					{
+						// response
+						
+						// uri 확장자 체크 -> cgi call -> makeResponse()
+						// makeResponse()
+					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
+				{
 					// resource read
+				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_writes))
 			{
-				if (ft_get_time()asdnfa) // 타임아웃 체크
-					// 클라이언트 timeout disconnect
+				
 
 				if (fd->getType() == CLIENT_FDTYPE)
-					// 클라이언트 리스폰스 write
+				{
+					// 클라이언트 Response write
+				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
+				{
 					// resource write
+				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_errors))
 			{
-				if (Manager::getInstance()->getFDTable[i]->getType() == SERVER_FDTYPE)
+				if (fd->getType() == SERVER_FDTYPE)
+				{
 					// 서버 에러 - 프로그램 터짐
-				else if (Manager::getInstance()->getFDTable[i]->getType() == CLIENT_FDTYPE)
+				}
+				else if (fd->getType() == CLIENT_FDTYPE)
+				{
 					// 클라이언트 에러 - disconnect
-				else if (Manager::getInstance()->getFDTable[i]->getType() == RESOURCE_FDTYPE)
+				}
+				else if (fd->getType() == RESOURCE_FDTYPE)
+				{
 					// 리소스 io error - internal server error
+				}
 			}
 		}
 	}

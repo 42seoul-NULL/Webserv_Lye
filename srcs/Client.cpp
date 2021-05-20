@@ -113,16 +113,21 @@ Server		*Client::getServer()
 	return (this->server);
 }
 
-void Client::readRequest(void)
+int Client::readRequest(void)
 {
+	this->setLastRequestMs(ft_get_time());
 	char buf[BUFFER_SIZE + 1];
 
 	int readed;
 	readed = read(this->socket_fd, buf, BUFFER_SIZE);
+	if (readed <= 0)
+		return (DISCONNECT_CLIENT);
 	buf[readed] = 0;
 
 	this->request.getRawRequest() += buf;
 
 	if (this->request.tryMakeRequest() == true)
 		this->status = REQUEST_COMPLETE;
+	return (1);
+	
 }

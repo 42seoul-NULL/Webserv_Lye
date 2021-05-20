@@ -30,7 +30,7 @@ class Webserver
 
 		std::map<int, Server> servers;
 
-		void	clear_connected_socket(int connected_socket_fd);
+		void	disconnect_client(Client &client);
 		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
 		Location &getPerfectLocation(int server_socket_fd, const std::string &server_name, const std::string &uri);
 	

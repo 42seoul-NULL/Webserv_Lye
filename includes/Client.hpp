@@ -8,6 +8,7 @@
 # include "Response.hpp"
 
 # define BUFFER_SIZE 65536
+# define DISCONNECT_CLIENT -1
 
 typedef enum			e_status
 {
@@ -50,7 +51,7 @@ class Client
 		Response	&getResponse();
 		Server		*getServer();
 
-		void readRequest(void);
+		int readRequest(void);
 
 };
 

@@ -75,6 +75,12 @@ int					Server::getSocketFd() const
 	return (this->socket_fd);
 }
 
+std::map<int, Client> &Server::getClients()
+{
+	return (this->clients);
+}
+
+
 std::map<std::string, Location> &Server::getLocations()
 {
 	return (this->locations);
@@ -93,10 +99,13 @@ int Server::acceptClient(int server_fd, int &fd_max)
 		fd_max = client_socket;
 
 	this->clients[client_socket].setServerSocketFd(server_fd);
-	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setSocketFd(client_socket);
 	this->clients[client_socket].setLastRequestMs(ft_get_time());
+	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
+
+	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE);
+	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 
 	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
