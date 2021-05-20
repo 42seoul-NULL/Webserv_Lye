@@ -1,9 +1,12 @@
 SRCNAME	=		\
 					main.cpp\
-					parser.cpp\
+					Client.cpp\
+					Location.cpp\
+					Manager.cpp\
+					Server.cpp\
+					Webserver.cpp\
 					Request.cpp\
-					Response.cpp\
-					nginx.cpp
+					Response.cpp
 
 SRCDIR		=		./srcs/
 
