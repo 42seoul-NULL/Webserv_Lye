@@ -127,7 +127,15 @@ int Client::readRequest(void)
 	this->request.getRawRequest() += buf;
 
 	if (this->request.tryMakeRequest() == true)
+	{
 		this->status = REQUEST_COMPLETE;
+		this->request.initRequest();
+	}
+	std::cout << "|" << this->request.getRawBody() << "|" << std::endl;
+	std::cout << "|" << this->status << "|" << std::endl;
+	std::cout << "|" << this->request.getRawRequest() <<"|" << std::endl;
+	std::cout << std::endl;
+
 	return (1);
 	
 }

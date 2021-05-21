@@ -6,9 +6,15 @@
 # include <map>
 # include "../libft_cpp/libft.hpp"
 
-# define NEEDBODY -1	// 이건 사용하는 건지 안하는 건지 몰랑몰랑 아 몰라드 아몰라몰라 아몰레드
+// # define NEEDBODY -1	// 이건 사용하는 건지 안하는 건지 몰랑몰랑 아 몰라드 아몰라몰라 아몰레드
 # define CHUNKED 2
 # define CONTENT_LENGTH 1
+# define NOBODY 0
+
+# define PARSING_HEADER 0
+# define PARSING_BODY 1
+
+
 
 class Request
 {
@@ -49,9 +55,9 @@ class Request
 		void	makeStartLine(void);
 		void	makeRequestHeader(void);
 
-		void	parseMethod(void);
-		void	parseUri(void);
-		void	parseHttpVersion(void);
+		void	parseMethod(std::string &start_line);
+		void	parseUri(std::string &start_line);
+		void	parseHttpVersion(std::string &start_line);
 
 		bool	bodyCheck(void);
 		bool	isComplete(void);		

@@ -122,8 +122,8 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	// 매칭되면 cgi 처리, 아니면 일단 response 만들러 ㄱㄱ
 
 	size_t dot_pos = request.getUri().find('.');
-	if (dot_pos == std::string::npos);
-		// cgi 아님
+	if (dot_pos == std::string::npos)
+		return (false);
 
 	size_t ext_end = dot_pos;
 	while (ext_end != request.getUri().length() && request.getUri()[ext_end] != '/' && request.getUri()[ext_end] != '?')

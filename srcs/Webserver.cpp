@@ -230,7 +230,7 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 					if (client->getStatus() == REQUEST_COMPLETE)
 					{
 						// response
-						if (client->getServer()->isCgiRequest(this->getPerfectLocation(*client->getServer(), client->getRequest().getUri()), client->getRequest()))
+						if (client->getServer()->isCgiRequest( this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() ) ,  client->getRequest()))
 						{
 							// cgi 처리 필요
 						}

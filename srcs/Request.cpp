@@ -87,31 +87,31 @@ void	Request::initRequest(void)
 	this->raw_header.clear();
 	this->raw_body.clear();
 	this->temp_body.clear();
-	status = 0;
-	type = 0;
+	this->status = PARSING_HEADER;
+	this->type = NOBODY;
 }
 
 bool	Request::tryMakeRequest(void)
 {
 	std::size_t	found = this->raw_request.find("\r\n\r\n");
-	int	res = 1;
 
-	std::cout << "first header\n" << raw_request << "hyeonski tkfkdgo\n" << std::endl;
-	if (found != std::string::npos && this->status == 0)
+	// std::cout << "first header\n" << raw_request << "hyeonski tkfkdgo\n" << std::endl;
+
+	if (found != std::string::npos && this->status == PARSING_HEADER)
 	{
 		this->makeStartLine();
 		this->makeRequestHeader();
-		this->status = 1;
-		res = bodyCheck();
-		exit(0);
-		if (res == 0)
+		this->status = PARSING_BODY;
+		int	res = bodyCheck();
+		// exit(0);
+		if (res == NOBODY)
 		{
 			// this->raw_request = this->temp_body;
 			this->temp_body.clear();
 			return (true);
 		}
 	}
-	if (this->status == 1)
+	if (this->status == PARSING_BODY)
 	{
 		this->temp_body += raw_request;
 		return (isComplete());
@@ -123,62 +123,54 @@ bool	Request::tryMakeRequest(void)
 
 void	Request::makeStartLine(void)
 {
-	std::cout <<"|" << this->raw_request  << "|" << std::endl;
-	this->parseMethod();
-	this->parseUri();
-	this->parseHttpVersion();
-	std::size_t n = this->raw_request.find("\r\n");
-	if (this->raw_request.length() >= (n + 2))
-		this->raw_request = this->raw_request.substr(n + 2);
+	// std::cout <<"|" << this->raw_request  << "|" << std::endl;
+	std::size_t	found = this->raw_request.find("\r\n");
+	std::string start_line = this->raw_request.substr(0, found);
+
+	this->parseMethod(start_line);
+	this->parseUri(start_line);
+	this->parseHttpVersion(start_line);
+
+	if (this->raw_request.length() > (found + 2))
+		this->raw_request = this->raw_request.substr(found + 2);
 	else
 		this->raw_request = "";
 }
 
-void	Request::parseMethod(void)
+void	Request::parseMethod(std::string &start_line)
 {
-	std::size_t	found = this->raw_request.find("\r\n");
-	std::string start_line = this->raw_request.substr(0, found);
 	this->method = start_line.substr(0, start_line.find(' '));
 }
 
-void	Request::parseUri(void)
+void	Request::parseUri(std::string &start_line)
 {
-	std::size_t	found = this->raw_request.find("\r\n");
-	std::string start_line = this->raw_request.substr(0, found);
 	std::size_t start_pos = start_line.find(' ');
 
-	this->uri = start_line.substr(start_pos + 1, start_line.find_last_of(' ') - start_pos - 1);
+	this->uri = start_line.substr(start_pos + 1, start_line.rfind(' ') - start_pos - 1);
 }
 
-void	Request::parseHttpVersion(void)
+void	Request::parseHttpVersion(std::string &start_line)
 {
-	std::size_t	found = this->raw_request.find("\r\n");
-	std::string start_line = this->raw_request.substr(0, found);
-
-	this->http_version = start_line.substr(start_line.find_last_of(' ') + 1);
+	this->http_version = start_line.substr(start_line.rfind(' ') + 1);
 }
 
 void	Request::makeRequestHeader(void)
 {
-	size_t rn = this->raw_request.find("\r\n");
 	this->raw_header = this->raw_request.substr(0, this->raw_request.find("\r\n\r\n"));
 	
 	std::vector<std::string> split_vec;
 
-	std::cout << "------------------------\n";
-	std::cout << raw_header << "\n--------------------------------------" << std::endl;
 	ft_split(this->raw_header, "\r\n", split_vec);
-	std::cout << "vec size = " << split_vec.size() << std::endl;
-	std::vector<std::string>::iterator i;
-	for (i = split_vec.begin(); i != split_vec.end(); i++)
+
+	for (std::vector<std::string>::iterator i = split_vec.begin(); i != split_vec.end(); i++)
 	{
 		std::string temp = *i;
 		std::size_t found = temp.find(":");
 		std::string key = temp.substr(0, found);
-		while (temp[found + 1] == 32)
+		while (found + 1 < temp.length() && temp[found + 1] == 32) // space 건너뛰기
 			found++;
 		std::string value = "";
-		if (temp.length() != (found + 1))
+		if (temp.length() > (found + 1))
 			value = temp.substr(found + 1);
 		headers[key] = value;
 	}
@@ -189,15 +181,17 @@ void	Request::makeRequestHeader(void)
 		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 
 	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
-	this->raw_request.clear();
 }
 
 bool	Request::bodyCheck(void)
 {
-	if (this->headers["Transfer-Encoding"] == "chunked")
-		this->type = CHUNKED;
-	else if (this->headers["Content-Length"] != "")
-		this->type = CONTENT_LENGTH;
+	std::map<std::string, std::string>::iterator iter = this->headers.find("Transfer-Encoding");
+	if (iter != this->headers.end() && iter->second == "chunked")
+		return (this->type = CHUNKED);
+
+	iter = this->headers.find("Content-Length");
+	if (iter != this->headers.end() && iter->second != "")
+		return (this->type = CONTENT_LENGTH);
 	return (this->type);
 }
 
@@ -205,36 +199,40 @@ bool	Request::isComplete(void)
 {
 	std::size_t len = ft_atoi(this->headers["Content-Length"]);
 
-	if (this->type == 1 && this->temp_body.length() >= len)
+	if (this->type == CONTENT_LENGTH && this->temp_body.length() >= len)
 	{
 		this->raw_body += this->temp_body.substr(0, len);
-		this->raw_request += this->temp_body.substr(len); // 다음 리퀘스트가 한 번에 붙어서 오면 어떻게 처리해야하는가?
+		this->raw_request += this->temp_body.substr(len);
 		temp_body.clear();
+		this->status = PARSING_HEADER;
 		return (true);
 	}
-	else if (this->type == 2)
+	else if (this->type == CHUNKED)
 	{
 		std::size_t found = this->temp_body.find("\r\n");
 		std::size_t	chunk_size;
+
 
 		while  (found != std::string::npos)
 		{
 			chunk_size = ft_atoi_hex(this->temp_body.substr(0, found));
 			if (chunk_size == 0)
 			{
-				this->raw_request += this->temp_body.substr(found + 2);
+				if (temp_body.length() > 5)
+					this->raw_request += this->temp_body.substr(found + 4);
 				this->temp_body.clear();
+				this->status = PARSING_HEADER;
 				return (true);
 			}
 			//this->temp_body = this->temp_body.substr(found + 2);
 			std::string cut = this->temp_body.substr(found + 2);
-			if (cut.length() >= chunk_size)
+			if (cut.length() >= chunk_size + 2)
 			{
-				found = cut.find("\r\n");
-				this->raw_body += cut.substr(0, found);
+				this->raw_body += cut.substr(0, chunk_size);
 				this->temp_body.clear();
-				if (cut.length() >= found + 2)
-					this->temp_body = cut.substr(found + 2);
+				if (cut.length() > chunk_size + 2)
+					this->temp_body = cut.substr(chunk_size + 2);
+				raw_request.clear();
 			}
 			else 
 				break ;
