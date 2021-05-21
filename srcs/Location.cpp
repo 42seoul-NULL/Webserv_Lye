@@ -14,7 +14,7 @@ Location::Location(const Location &src)
 	this->error_pages.insert(src.error_pages.begin(), src.error_pages.end());
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extension = src.cgi_extension;
+	this->cgi_extensions = src.cgi_extensions;
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
@@ -29,7 +29,7 @@ Location &Location::operator=(const Location &src)
 	this->error_pages.insert(src.error_pages.begin(), src.error_pages.end());
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extension = src.cgi_extension;
+	this->cgi_extensions = src.cgi_extensions;
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
@@ -59,9 +59,9 @@ void		Location::setAutoIndex(bool auto_index)
 	return ;
 }
 
-void		Location::setCgiExtension(const std::string &cgi_extension)
+void		Location::setCgiExtensions(std::vector<std::string> &cgi_extensions)
 {
-	this->cgi_extension = cgi_extension;
+	this->cgi_extensions = cgi_extensions;
 	return ;
 }
 
@@ -118,9 +118,9 @@ bool	Location::getAutoIndex()
 	return (this->auto_index);
 }
 
-const std::string &Location::getCgiExtension()
+std::vector<std::string> &Location::getCgiExtensions()
 {
-	return (this->cgi_extension);
+	return (this->cgi_extensions);
 }
 
 const std::string &Location::getAuthKey()
@@ -145,7 +145,8 @@ void	Location::show()
 	std::cout << "rqmbs	:	" << this->request_max_body_size << std::endl;
 	std::cout << "upload_path	:	" << this->upload_path << std::endl;
 	std::cout << "auto_index	:	" << this->auto_index << std::endl;
-	std::cout << "cgi_extension	:	" << this->cgi_extension << std::endl;
+	for (std::vector<std::string>::iterator iter = this->cgi_extensions.begin(); iter != this->cgi_extensions.end(); iter++)
+		std::cout << "cgi_extension	:	" << *iter << std::endl;
 	std::cout << "auth_key	:	" << this->auth_key << std::endl;
 	std::cout << "index	: ";
 	for (std::list<std::string>::iterator iter = this->index.begin(); iter != this->index.end(); iter++)

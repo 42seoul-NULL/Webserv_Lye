@@ -96,15 +96,17 @@ bool	Request::tryMakeRequest(void)
 	std::size_t	found = this->raw_request.find("\r\n\r\n");
 	int	res = 1;
 
+	std::cout << "first header\n" << raw_request << "hyeonski tkfkdgo\n" << std::endl;
 	if (found != std::string::npos && this->status == 0)
 	{
 		this->makeStartLine();
 		this->makeRequestHeader();
 		this->status = 1;
 		res = bodyCheck();
+		exit(0);
 		if (res == 0)
 		{
-			this->raw_request = this->temp_body;
+			// this->raw_request = this->temp_body;
 			this->temp_body.clear();
 			return (true);
 		}
@@ -121,6 +123,7 @@ bool	Request::tryMakeRequest(void)
 
 void	Request::makeStartLine(void)
 {
+	std::cout <<"|" << this->raw_request  << "|" << std::endl;
 	this->parseMethod();
 	this->parseUri();
 	this->parseHttpVersion();
@@ -157,11 +160,15 @@ void	Request::parseHttpVersion(void)
 
 void	Request::makeRequestHeader(void)
 {
-	this->raw_header = this->raw_request.substr(this->raw_request.find("\r\n") + 1, this->raw_request.find("\r\n\r\n"));
+	size_t rn = this->raw_request.find("\r\n");
+	this->raw_header = this->raw_request.substr(0, this->raw_request.find("\r\n\r\n"));
 	
 	std::vector<std::string> split_vec;
 
+	std::cout << "------------------------\n";
+	std::cout << raw_header << "\n--------------------------------------" << std::endl;
 	ft_split(this->raw_header, "\r\n", split_vec);
+	std::cout << "vec size = " << split_vec.size() << std::endl;
 	std::vector<std::string>::iterator i;
 	for (i = split_vec.begin(); i != split_vec.end(); i++)
 	{
@@ -171,16 +178,17 @@ void	Request::makeRequestHeader(void)
 		while (temp[found + 1] == 32)
 			found++;
 		std::string value = "";
-		if (temp.length() != (found - 1))
+		if (temp.length() != (found + 1))
 			value = temp.substr(found + 1);
 		headers[key] = value;
 	}
 
 	// 맵 출력용
+	std::cout << "size = " <<  headers.size() << std::endl;
 	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
 		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 
-	this->temp_body = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
+	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
 	this->raw_request.clear();
 }
 
@@ -218,13 +226,18 @@ bool	Request::isComplete(void)
 				this->temp_body.clear();
 				return (true);
 			}
-			this->temp_body = this->temp_body.substr(found + 2);
-			if (this->temp_body.length() >= chunk_size)
+			//this->temp_body = this->temp_body.substr(found + 2);
+			std::string cut = this->temp_body.substr(found + 2);
+			if (cut.length() >= chunk_size)
 			{
-				found = this->temp_body.find("\r\n");
-				this->raw_body += this->temp_body.substr(0, found);
-				this->temp_body = this->temp_body.substr(found + 2);
+				found = cut.find("\r\n");
+				this->raw_body += cut.substr(0, found);
+				this->temp_body.clear();
+				if (cut.length() >= found + 2)
+					this->temp_body = cut.substr(found + 2);
 			}
+			else 
+				break ;
 			found = this->temp_body.find("\r\n");
 		}
 	}

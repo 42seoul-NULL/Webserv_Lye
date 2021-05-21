@@ -1,9 +1,5 @@
 #include "../libft_cpp/libft.hpp"
-#include "../includes/Client.hpp"
-#include "../includes/Location.hpp"
-#include "../includes/Manager.hpp"
-#include "../includes/Server.hpp"
-#include "../includes/Webserver.hpp"
+#include "Manager.hpp"
 
 int	main(int ac, char **av)
 {
@@ -21,7 +17,7 @@ int	main(int ac, char **av)
 	try
 	{
 		Manager::getInstance()->getWebserver().initServers(5);
-	// 	my_webserver.run(timeout, 100);
+		Manager::getInstance()->getWebserver().run(timeout, 100);
 	}
 	catch(const char *e)
 	{

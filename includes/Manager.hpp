@@ -3,9 +3,11 @@
 
 # include <map>
 # include <iostream>
-# include "Server.hpp"
-# include "../includes/Webserver.hpp"
 # include "../libft_cpp/libft.hpp"
+# include "Webserver.hpp"
+# include "Server.hpp"
+
+class Client;
 
 typedef enum	e_FDType
 {
@@ -19,7 +21,7 @@ class FDType
 	protected:
 		int type;
 	public :
-		virtual ~FDType(void);
+		virtual ~FDType() {}
 		int getType();
 };
 
@@ -27,19 +29,22 @@ class ServerFD : public FDType
 {
 	public :
 		ServerFD(int type);
+		~ServerFD() {}
 };
 
 class ClientFD : public FDType
 {
 	public :
-		ClientFD(int type);
+		ClientFD(int type, Client *client);
 		Client *to_client;
+		~ClientFD() {}
 };
 
 class ResourceFD : public FDType
 {
 	public :
 		ResourceFD(int type);
+		~ResourceFD() {}
 };
 
 class Manager
@@ -51,7 +56,7 @@ class Manager
 		bool	returnFalseWithMsg(const char *str);
 		bool	isReserved(const std::string &src);
 
-		std::map<int, Server> servers; // config용
+		std::map<int, Server> server_configs; // config용
 		static Manager*	instance;
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
@@ -63,7 +68,7 @@ class Manager
 		static Manager* getInstance();
 		static const int decodeMimeBase64[256];
 		
-		std::map<int, Server>& getServers();
+		std::map<int, Server>& getServerConfigs();
 		std::map<std::string, std::string>& getMimeType();	
 		std::map<std::string, std::string>& getStatusCode();
 		bool	parseConfig(const char *config_file_path);

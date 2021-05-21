@@ -1,4 +1,5 @@
 #include "../includes/Manager.hpp"
+#include "Location.hpp"
 
 Manager* Manager::instance;
 
@@ -166,9 +167,9 @@ bool	Manager::returnFalseWithMsg(const char *str)
 	return (false);
 }
 
-std::map<int, Server> &Manager::getServers()
+std::map<int, Server> &Manager::getServerConfigs()
 {
-	return (this->servers);
+	return (this->server_configs);
 }
 
 std::map<std::string, std::string> &Manager::getMimeType()
@@ -236,11 +237,11 @@ bool	Manager::parseConfig(const char *config_file_path)
 				iter++; // 8080
 				key = ft_atoi(*iter);
 				iter++; // 127.0.0.1
-				if (instance->servers.find(key) != instance->servers.end()) // 이미 존재
+				if (instance->server_configs.find(key) != instance->server_configs.end()) // 이미 존재
 					throw "server_name and port already exists";
-				instance->servers[key].setServerName(server_name);
-				instance->servers[key].setPort(key);
-				instance->servers[key].setIP(*iter);
+				instance->server_configs[key].setServerName(server_name);
+				instance->server_configs[key].setPort(key);
+				instance->server_configs[key].setIP(*iter);
 			}
 			else if (*iter == "location")
 			{
@@ -252,14 +253,14 @@ bool	Manager::parseConfig(const char *config_file_path)
 				iter++;
 				int key2 = ft_atoi(*iter);
 				iter++;
-				instance->servers[key].getLocations()[location_name].getErrorPages()[key2] = *iter;
+				instance->server_configs[key].getLocations()[location_name].getErrorPages()[key2] = *iter;
 			}
 			else if (*iter == "allow_methods")
 			{
 				iter++;
 				while (!isReserved(*iter) && iter != vec.end())
 				{
-					instance->servers[key].getLocations()[location_name].getAllowMethods().push_back(*iter);
+					instance->server_configs[key].getLocations()[location_name].getAllowMethods().push_back(*iter);
 					iter++;
 				}
 				if (iter == vec.end())
@@ -269,14 +270,14 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "root")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRoot(*iter);
+				instance->server_configs[key].getLocations()[location_name].setRoot(*iter);
 			}
 			else if (*iter == "index")
 			{
 				iter++;
 				while (!isReserved(*iter) && iter != vec.end())
 				{
-					instance->servers[key].getLocations()[location_name].getIndex().push_back(*iter);
+					instance->server_configs[key].getLocations()[location_name].getIndex().push_back(*iter);
 					iter++;
 				}
 				if (iter == vec.end())
@@ -286,37 +287,37 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "upload_path")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setUploadPath(*iter);
+				instance->server_configs[key].getLocations()[location_name].setUploadPath(*iter);
 			}
 			else if (*iter == "auto_index")
 			{
 				iter++;
 				if (*iter == "on")
-					instance->servers[key].getLocations()[location_name].setAutoIndex(true);
+					instance->server_configs[key].getLocations()[location_name].setAutoIndex(true);
 				else
-					instance->servers[key].getLocations()[location_name].setAutoIndex(false);
+					instance->server_configs[key].getLocations()[location_name].setAutoIndex(false);
 			}
 			else if (*iter == "request_max_body_size")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
+				instance->server_configs[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
 			}
 			else if (*iter == "cgi_extension")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setCgiExtension(*iter);
+				instance->server_configs[key].getLocations()[location_name].getCgiExtensions().push_back(*iter);
 			}
 			else if (*iter == "auth_key")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setAuthKey(*iter);
+				instance->server_configs[key].getLocations()[location_name].setAuthKey(*iter);
 			}
 			else if (*iter == "return")
 			{
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
+				instance->server_configs[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
 				iter++;
-				instance->servers[key].getLocations()[location_name].setRedirectAddr(*iter);				
+				instance->server_configs[key].getLocations()[location_name].setRedirectAddr(*iter);				
 			}
 		}
 	}
@@ -337,9 +338,10 @@ ServerFD::ServerFD(int type)
 {
 	this->type = type;
 }
-ClientFD::ClientFD(int type)
+ClientFD::ClientFD(int type, Client *client)
 {
 	this->type = type;
+	this->to_client = client;
 }
 ResourceFD::ResourceFD(int type)
 {
@@ -361,11 +363,11 @@ Webserver &Manager::getWebserver()
 //for test
 void		Manager::show()
 {
-	for (std::map<int, Server>::iterator iter = this->servers.begin(); iter != this->servers.end(); iter++)
+	for (std::map<int, Server>::iterator iter = this->server_configs.begin(); iter != this->server_configs.end(); iter++)
 	{
 		std::cout << "server key : " << iter->first << std::endl;
 		iter->second.show();
 	}
 }
 /////////////////// class Manager end ////////////////////
-/////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////

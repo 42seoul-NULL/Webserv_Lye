@@ -3,13 +3,8 @@
 
 # include <list>
 # include <map>
+# include <vector>
 # include <iostream>
-
-typedef enum			e_status
-{
-	REQUEST_RECEIVING,
-	RESPONSE_READY
-}						t_status;
 
 class Location
 {
@@ -21,7 +16,7 @@ class Location
 		int				request_max_body_size;
 		std::string		upload_path;
 		bool			auto_index;
-		std::string		cgi_extension;
+		std::vector<std::string> cgi_extensions;
 		std::string		auth_key;
 
 		int				redirect_return;
@@ -37,7 +32,7 @@ class Location
 		void			setRequestMaxBodySize(int request_max_body_size);
 		void			setUploadPath(const std::string &upload_path);
 		void			setAutoIndex(bool auto_index);
-		void			setCgiExtension(const std::string &cgi_extension);
+		void			setCgiExtensions(std::vector<std::string> &cgi_extensions);
 		void			setAuthKey(const std::string &auth_key);
 		void			setRedirectReturn(int redirect_return);
 		void			setRedirectAddr(const std::string &redirect_addr);
@@ -48,7 +43,7 @@ class Location
 		int getRequestMaxBodySize();
 		const std::string &getUploadPath();
 		bool	getAutoIndex();
-		const std::string &getCgiExtension();
+		std::vector<std::string> &getCgiExtensions();
 		const std::string &getAuthKey();
 		int		getRedirectReturn();
 		const std::string &getRedirectAddr();

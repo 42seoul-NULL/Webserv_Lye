@@ -3,7 +3,6 @@
 
 # include <iostream>
 # include <map>
-# include "Location.hpp"
 
 class Response
 {

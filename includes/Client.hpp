@@ -3,18 +3,14 @@
 
 # include <iostream>
 # include <unistd.h>
-# include "Manager.hpp"
+# include "Type.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
 
 # define BUFFER_SIZE 65536
 # define DISCONNECT_CLIENT -1
 
-typedef enum			e_status
-{
-	REQUEST_RECEIVING,
-	REQUEST_COMPLETE,
-}						t_status;
+class Server;
 
 class Client
 {

@@ -1,4 +1,9 @@
-#include "../includes/Webserver.hpp"
+#include "Manager.hpp"
+#include "Webserver.hpp"
+#include "../libft_cpp/libft.hpp"
+#include "Server.hpp"
+#include "Client.hpp"
+#include "Location.hpp"
 
 Webserver::Webserver() : fd_max(-1)
 {
@@ -50,49 +55,24 @@ void	Webserver::disconnect_client(Client &client)
 	return ;
 }
 
-const Server &Webserver::getServerFromClient(int server_socket_fd, const std::string &server_name)
-{
-	if (this->servers[server_socket_fd].find(server_name) == this->servers[server_socket_fd].end())
-		return (this->servers[server_socket_fd].begin()->second);
-	return ( (this->servers[server_socket_fd][server_name]) );
-}
-
-Location &Webserver::getPerfectLocation(int server_socket_fd, const std::string &server_name, const std::string &uri)
-{
-	std::map<std::string, Location> *locs;
-
-	if (this->servers[server_socket_fd].find(server_name) == this->servers[server_socket_fd].end()) // 못찾으면
-		locs = &(this->servers[server_socket_fd].begin()->second.getLocations());
-	else
-		locs = &(this->servers[server_socket_fd][server_name].getLocations());
-
-	Location &ret = (*locs)["/"];
-
-	std::string key = "";
-	for (std::string::const_iterator iter = uri.begin(); iter != uri.end(); iter++)
-	{
-		key += *iter;
-		if (*iter == '/')
-		{
-			if (locs->find(key) == locs->end())
-				return (ret);
-			else
-				ret = (*locs)[key];
-		}
-	}
-	return (ret);
-}
+// const Server &Webserver::getServerFromClient(int server_socket_fd, const std::string &server_name)
+// {
+// 	if (this->servers[server_socket_fd].find(server_name) == this->servers[server_socket_fd].end())
+// 		return (this->servers[server_socket_fd].begin()->second);
+// 	return ( (this->servers[server_socket_fd][server_name]) );
+// }
 
 bool	Webserver::initServers(int queue_size)
 {
-	for (std::map<int, Server>::iterator iter = Manager::getInstance()->getServers().begin(); iter != Manager::getInstance()->getServers().end(); iter++)
+	for (std::map<int, Server>::iterator iter = Manager::getInstance()->getServerConfigs().begin(); iter != Manager::getInstance()->getServerConfigs().end(); iter++)
 	{
 		struct sockaddr_in  server_addr;
 
 		iter->second.setSocketFd(socket(PF_INET, SOCK_STREAM, 0));
 
-		FDType *new_socket_fd = new ServerFD(SERVER_FDTYPE);
-		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fd));
+		// FDTable에 insert
+		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
+		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fdtype));
 		
 		int option = 1;
 		setsockopt(iter->second.getSocketFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
@@ -125,6 +105,79 @@ bool	Webserver::initServers(int queue_size)
 	return (true);
 }
 
+// Location &Webserver::getPerfectLocation(int server_socket_fd, const std::string &server_name, const std::string &uri)
+// {
+// 	std::map<std::string, Location> *locs;
+
+// 	if (this->servers[server_socket_fd].find(server_name) == this->servers[server_socket_fd].end()) // 못찾으면
+// 		locs = &(this->servers[server_socket_fd].begin()->second.getLocations());
+// 	else
+// 		locs = &(this->servers[server_socket_fd][server_name].getLocations());
+
+// 	Location &ret = (*locs)["/"];
+
+// 	std::string key = "";
+// 	for (std::string::const_iterator iter = uri.begin(); iter != uri.end(); iter++)
+// 	{
+// 		key += *iter;
+// 		if (*iter == '/')
+// 		{
+// 			if (locs->find(key) == locs->end())
+// 				return (ret);
+// 			else
+// 				ret = (*locs)[key];
+// 		}
+// 	}
+// 	return (ret);
+// }
+
+Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
+{
+	size_t pos;
+	std::string uri_loc = "";
+
+	pos = uri.find('.');
+	if (pos != std::string::npos)
+	{
+		// 	. 이 있으니까 거기까지 자르면됨
+		while (uri[pos] != '/')
+			pos--;
+		uri_loc = uri.substr(0, pos + 1); // 맨뒤에 / 붙여줄꺼면 +1 하고 아니면 안하고 어떻게할까숑 
+	}
+	else
+	{
+		pos = uri.find('?');
+		if (pos != std::string::npos)
+		{	
+			// ? 있으니까 딱 거기까지 잘라버리면 될듯
+			uri_loc = uri.substr(0, pos);
+			if (uri_loc[uri_loc.length() - 1] != '/')
+				uri_loc += "/";
+		}
+		else
+		{
+			uri_loc = uri;
+		}
+	}
+
+	std::map<std::string, Location> &loc_map = server.getLocations();
+	Location &ret = loc_map["/"];
+
+	std::string key = "";
+	for (std::string::const_iterator iter = uri.begin(); iter != uri.end(); iter++)
+	{
+		key += *iter;
+		if (*iter == '/')
+		{
+			if (loc_map.find(key) == loc_map.end())
+				return (ret);
+			else
+				ret = loc_map[key];
+		}
+	}
+	return (ret);	
+}
+
 bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 {
 	fd_set	cpy_reads;
@@ -149,13 +202,10 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 		
 		FDType *fd = NULL;
 		for (int i = 0; i <= this->fd_max; i++)
-		{
-			fd = Manager::getInstance()->getFDTable()[i];
-			if (fd == NULL)
+		{	
+			if (Manager::getInstance()->getFDTable().count(i) == 0)
 				continue ;
-			
-			//if  (ft_get_time() - ) // 타임아웃 체크
-					// 클라이언트 timeout disconnect
+			fd = Manager::getInstance()->getFDTable()[i];
 
 			if (FT_FD_ISSET(i, &cpy_reads))
 			{
@@ -168,16 +218,27 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
-					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
-					if (client_fd->to_client->readRequest() == DISCONNECT_CLIENT)
-						disconnect_client(*(client_fd->to_client));
+					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 
-					if (client_fd->to_client->getStatus() == REQUEST_COMPLETE)
+					//if  (ft_get_time() - ) // 타임아웃 체크 필요
+
+					if (client->readRequest() == DISCONNECT_CLIENT)
+					{
+						disconnect_client(*client);
+						std::cout << "disconnected: " << i << std::endl;
+					}
+					if (client->getStatus() == REQUEST_COMPLETE)
 					{
 						// response
+						if (client->getServer()->isCgiRequest(this->getPerfectLocation(*client->getServer(), client->getRequest().getUri()), client->getRequest()))
+						{
+							// cgi 처리 필요
+						}
+						else
+						{
+							// 일반 response 처리 필요
+						}
 						
-						// uri 확장자 체크 -> cgi call -> makeResponse()
-						// makeResponse()
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
@@ -187,10 +248,11 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 			}
 			else if (FT_FD_ISSET(i, &cpy_writes))
 			{
-				
-
 				if (fd->getType() == CLIENT_FDTYPE)
 				{
+					//if  (ft_get_time() - ) // 타임아웃 체크
+					// 클라이언트 timeout disconnect
+
 					// 클라이언트 Response write
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
@@ -206,7 +268,8 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
-					// 클라이언트 에러 - disconnect
+					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
+					disconnect_client(*(client_fd->to_client));
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{

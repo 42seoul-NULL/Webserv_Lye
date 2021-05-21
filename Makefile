@@ -21,19 +21,19 @@ LIB_NAME	=		libft.a
 CC			=		clang++
 
 CF			=		-Wall -Wextra -Werror -std=c++98 -I ${INCDIR} ${SRCS}
-DCF			=		-g ${SRCS}
+DCF			=		-g ${SRCS} -fsanitize=address
 
 ${NAME}     :
 					make all -C "./libft_cpp"
 					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
-					${CC} ${CF} ${LIB_NAME} -o ${NAME} 
+					${CC} ${CF} ${LIB_NAME} -I $(INCDIR) -o ${NAME} 
 
 dbg		:
 					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
 					lldb webserv -- configs/test.conf
 
 test		:
-					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
+					${CC} ${DCF} ${LIB_NAME} -I $(INCDIR) -o ${NAME}
 					./webserv configs/test.conf
 
 fclean		:

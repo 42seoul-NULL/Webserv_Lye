@@ -8,9 +8,11 @@
 # include <sys/time.h>
 # include <sys/select.h>
 # include <fcntl.h>
-# include "Location.hpp"
 # include "../libft_cpp/libft.hpp"
-# include "Client.hpp"
+
+class Request;
+class Location;
+class Client;
 
 class Server
 {
@@ -40,7 +42,8 @@ class Server
 		std::map<int, Client> &getClients();
 
 		std::map<std::string, Location> &getLocations();
-		int Server::acceptClient(int server_fd, int &fd_max);
+		int acceptClient(int server_fd, int &fd_max);
+		bool isCgiRequest(Location &location, Request &request);
 		//for test//
 		void	show();
 };

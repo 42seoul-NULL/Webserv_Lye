@@ -1,4 +1,7 @@
 #include "../includes/Server.hpp"
+#include "Manager.hpp"
+#include "Location.hpp"
+#include "Client.hpp"
 
 Server::Server() : port(-1)
 {
@@ -104,12 +107,34 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
 
-	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE);
+	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
 	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 
 	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
 }
+
+bool Server::isCgiRequest(Location &location, Request &request)
+{
+	std::vector<std::string> &cgi_extensions = location.getCgiExtensions();
+
+	// uri에서 cgi extension 파싱하여 location의 그것과 매칭되는지 확인
+	// 매칭되면 cgi 처리, 아니면 일단 response 만들러 ㄱㄱ
+
+	size_t dot_pos = request.getUri().find('.');
+	if (dot_pos == std::string::npos);
+		// cgi 아님
+
+	size_t ext_end = dot_pos;
+	while (ext_end != request.getUri().length() && request.getUri()[ext_end] != '/' && request.getUri()[ext_end] != '?')
+		ext_end++;
+	
+	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
+	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
+		; // cgi 아님
+	//cgi 맞음.
+}
+
 
 //for test
 void		Server::show()

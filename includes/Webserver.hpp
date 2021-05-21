@@ -14,10 +14,10 @@
 # include <fcntl.h>
 # include <sys/stat.h>
 # include <map>
-# include "Server.hpp"
-# include "Location.hpp"
-# include "Client.hpp"
-# include "Manager.hpp"
+
+class Server;
+class Client;
+class Location;
 
 class Webserver
 {
@@ -32,8 +32,8 @@ class Webserver
 
 		void	disconnect_client(Client &client);
 		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
-		Location &getPerfectLocation(int server_socket_fd, const std::string &server_name, const std::string &uri);
-	
+		Location &getPerfectLocation(Server &server, const std::string &uri);
+
 	public	:
 		Webserver();
 		virtual ~Webserver();
