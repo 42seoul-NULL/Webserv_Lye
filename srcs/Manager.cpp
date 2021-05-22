@@ -338,14 +338,30 @@ ServerFD::ServerFD(int type)
 {
 	this->type = type;
 }
+
 ClientFD::ClientFD(int type, Client *client)
 {
 	this->type = type;
 	this->to_client = client;
 }
-ResourceFD::ResourceFD(int type)
+
+ResourceFD::ResourceFD(int type, Client *client)
 {
 	this->type = type;
+	this->to_client = client;
+}
+
+ResourceFD::ResourceFD(int type, pid_t pid, Client *client)
+{
+	this->type = type;
+	this->pid = pid;
+	this->to_client = client;
+}
+
+PipeFD::PipeFD(int type, pid_t pid)
+{
+	this->type = type;
+	this->pid = pid;
 }
 
 int FDType::getType()

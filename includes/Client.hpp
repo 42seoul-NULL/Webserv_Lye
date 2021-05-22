@@ -7,7 +7,6 @@
 # include "Request.hpp"
 # include "Response.hpp"
 
-# define BUFFER_SIZE 65536
 # define DISCONNECT_CLIENT -1
 
 class Server;

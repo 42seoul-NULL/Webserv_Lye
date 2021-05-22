@@ -71,6 +71,16 @@ const	std::string&	Request::getRawBody(void) const
 	return (this->raw_body);
 }
 
+const std::string&	Request::getTempBody(void) const
+{
+	return (this->temp_body);
+}
+
+Client*	Request::getClient(void) const
+{
+	return (this->client);
+}
+
 ///////////////////////////
 /////////getter_end////////
 ///////////////////////////
@@ -218,19 +228,19 @@ bool	Request::isComplete(void)
 			chunk_size = ft_atoi_hex(this->temp_body.substr(0, found));
 			if (chunk_size == 0)
 			{
-				if (temp_body.length() > 5)
-					this->raw_request += this->temp_body.substr(found + 4);
+				if (temp_body.length() > 5) //0\r\n\r\n 말고 더 있으면
+					this->raw_request += this->temp_body.substr(found + 4); // 마지막청크 다음 데이터 raw_request에 저장
 				this->temp_body.clear();
 				this->status = PARSING_HEADER;
 				return (true);
 			}
 			//this->temp_body = this->temp_body.substr(found + 2);
-			std::string cut = this->temp_body.substr(found + 2);
+			std::string cut = this->temp_body.substr(found + 2); //숫자 뒤 \r\n 다음부터 자름(데이터 보기 위해)
 			if (cut.length() >= chunk_size + 2)
 			{
-				this->raw_body += cut.substr(0, chunk_size);
+				this->raw_body += cut.substr(0, chunk_size); // 데이터 청크사이즈만큼 붙여준다
 				this->temp_body.clear();
-				if (cut.length() > chunk_size + 2)
+				if (cut.length() > chunk_size + 2) // 뒤 청크 같이 들어온 경우 temp_body에 다음 애들 넣어주기
 					this->temp_body = cut.substr(chunk_size + 2);
 				raw_request.clear();
 			}

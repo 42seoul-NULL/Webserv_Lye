@@ -131,8 +131,8 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
-		; // cgi 아님
-	//cgi 맞음.
+		return (false);
+	return (true);
 }
 
 

@@ -5,6 +5,7 @@ Client::Client()
 	this->server_socket_fd = -1;
 	this->socket_fd = -1;
 	this->status = REQUEST_RECEIVING;
+	this->request.getClient() = this;
 }
 
 Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
@@ -116,10 +117,10 @@ Server		*Client::getServer()
 int Client::readRequest(void)
 {
 	this->setLastRequestMs(ft_get_time());
-	char buf[BUFFER_SIZE + 1];
+	char buf[BUFFER_SIZE];
 
 	int readed;
-	readed = read(this->socket_fd, buf, BUFFER_SIZE);
+	readed = read(this->socket_fd, buf, BUFFER_SIZE - 1);
 	if (readed <= 0)
 		return (DISCONNECT_CLIENT);
 	buf[readed] = 0;
@@ -129,11 +130,12 @@ int Client::readRequest(void)
 	if (this->request.tryMakeRequest() == true)
 	{
 		this->status = REQUEST_COMPLETE;
-		this->request.initRequest();
+		// this->request.initRequest();
 	}
-	std::cout << "|" << this->request.getRawBody() << "|" << std::endl;
-	std::cout << "|" << this->status << "|" << std::endl;
-	std::cout << "|" << this->request.getRawRequest() <<"|" << std::endl;
+	std::cout << "Raw Body: |" << this->request.getRawBody() << "|" << std::endl;
+	std::cout << "Client status: |" << this->status << "|" << std::endl;
+	std::cout << "Raw Request: |" << this->request.getRawRequest() <<"|" << std::endl;
+	std::cout << "Temp Body: |" << this->request.getTempBody() << "|" << std::endl;
 	std::cout << std::endl;
 
 	return (1);

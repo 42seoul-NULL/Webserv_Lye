@@ -14,6 +14,8 @@ typedef enum	e_FDType
 	SERVER_FDTYPE,
 	CLIENT_FDTYPE,
 	RESOURCE_FDTYPE,
+	PIPE_FDTYPE,
+	CGI_RESOURCE_FDTYPE
 }				t_FDType;
 
 class FDType
@@ -43,9 +45,21 @@ class ClientFD : public FDType
 class ResourceFD : public FDType
 {
 	public :
-		ResourceFD(int type);
+		ResourceFD(int type, pid_t pid, Client *client);
+		ResourceFD(int type, Client *client);
+		pid_t pid;
+		Client *to_client;
 		~ResourceFD() {}
 };
+
+class PipeFD : public FDType
+{
+	public:
+		PipeFD(int type, pid_t pid, Client *client);
+		pid_t pid;
+		Client *to_client;
+		~PipeFD() {}
+}
 
 class Manager
 {

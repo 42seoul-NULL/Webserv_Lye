@@ -4,6 +4,7 @@
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Location.hpp"
+#include "CGI.hpp"
 
 Webserver::Webserver() : fd_max(-1)
 {
@@ -51,6 +52,7 @@ void	Webserver::disconnect_client(Client &client)
 
 	delete Manager::getInstance()->getFDTable()[client_socket_fd];
 	Manager::getInstance()->getFDTable()[client_socket_fd] = NULL;
+	Manager::getInstance()->getFDTable().erase(client_socket_fd);
 
 	return ;
 }
@@ -151,26 +153,28 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 		{	
 			// ? 있으니까 딱 거기까지 잘라버리면 될듯
 			uri_loc = uri.substr(0, pos);
-			if (uri_loc[uri_loc.length() - 1] != '/')
-				uri_loc += "/";
 		}
 		else
 		{
 			uri_loc = uri;
 		}
 	}
+	if (uri_loc[uri_loc.length() - 1] != '/')
+		uri_loc += "/";
 
 	std::map<std::string, Location> &loc_map = server.getLocations();
 	Location &ret = loc_map["/"];
 
 	std::string key = "";
-	for (std::string::const_iterator iter = uri.begin(); iter != uri.end(); iter++)
+	for (std::string::const_iterator iter = uri_loc.begin(); iter != uri_loc.end(); iter++)
 	{
 		key += *iter;
 		if (*iter == '/')
 		{
 			if (loc_map.find(key) == loc_map.end())
+			{
 				return (ret);
+			}
 			else
 				ret = loc_map[key];
 		}
@@ -178,7 +182,7 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	return (ret);	
 }
 
-bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
+bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 {
 	fd_set	cpy_reads;
 	fd_set	cpy_writes;
@@ -226,6 +230,7 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 					{
 						disconnect_client(*client);
 						std::cout << "disconnected: " << i << std::endl;
+						continue ;
 					}
 					if (client->getStatus() == REQUEST_COMPLETE)
 					{
@@ -233,6 +238,9 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 						if (client->getServer()->isCgiRequest( this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() ) ,  client->getRequest()))
 						{
 							// cgi 처리 필요
+							CGI cgi;
+							cgi.testCGICall(client->getRequest(), this->getPerfectLocation( *client->getServer(), client->getRequest().getUri()));
+							
 						}
 						else
 						{
@@ -241,9 +249,18 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 						
 					}
 				}
-				else if (fd->getType() == RESOURCE_FDTYPE)
+				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
 				{
 					// resource read
+					// pid 확인 후 exit이면 read 후 response 작성
+					// exit이 아니라면 continue;
+					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd)
+					
+					resource_fd->to_client->getResponse().makeResponse(resource_fd, i, resource_fd->to_client->getRequest());
+				}
+				else if (fd->getType() == PIPE_FDTYPE)
+				{
+					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
 				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_writes))
@@ -258,6 +275,11 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					// resource write
+				}
+				else if (fd->getType() == PIPE_FDTYPE)
+				{
+					// cgi pipe에 body write
+					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
 				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_errors))
@@ -274,6 +296,10 @@ bool	Webserver::run(struct timeval	timeout, unsigned int buffer_size)
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					// 리소스 io error - internal server error
+				}
+				else if (fd->getType() == PIPE_FDTYPE)
+				{
+					// pipe io error - internal server error
 				}
 			}
 		}

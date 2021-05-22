@@ -5,6 +5,7 @@
 # include <vector>
 # include <map>
 # include "../libft_cpp/libft.hpp"
+# include "Client.hpp"
 
 // # define NEEDBODY -1	// 이건 사용하는 건지 안하는 건지 몰랑몰랑 아 몰라드 아몰라몰라 아몰레드
 # define CHUNKED 2
@@ -32,6 +33,7 @@ class Request
 		std::string temp_body;
 		int	status;
 		int	type;
+		Client	*client;
 
 	public:
 		Request(void);
@@ -46,6 +48,8 @@ class Request
 		std::map<std::string, std::string>&	getHeaders(void) const;
 		const	std::string&	getRawHeader(void) const;
 		const std::string&	getRawBody(void) const;
+		const std::string& getTempBody(void) const;
+		Client*	getClient(void) const;
 
 	public:
 		void	initRequest(void);
