@@ -1,4 +1,5 @@
-#include "../includes/Request.hpp"
+#include "Request.hpp"
+#include "Client.hpp"
 
 Request::Request(void)
 {
@@ -84,6 +85,11 @@ Client*	Request::getClient(void) const
 ///////////////////////////
 /////////getter_end////////
 ///////////////////////////
+
+void Request::setClient(Client *client)
+{
+	this->client = client;
+}
 
 
 /////////////////////////// public func /////////////////////

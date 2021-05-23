@@ -3,9 +3,10 @@
 
 # include <iostream>
 # include <vector>
-# include "Request.hpp"
-# include "Manager.hpp"
-# include "Location.hpp"
+# include <map>
+
+class Location;
+class Request;
 
 class CGI
 {

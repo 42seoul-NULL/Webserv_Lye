@@ -8,7 +8,7 @@
 # include "Type.hpp"
 # include "Request.hpp"
 
-# define DEFAULT_STATUS
+# define DEFAULT_STATUS 0 // 0으로 하면 되려나?
 
 class Response
 {
@@ -24,7 +24,7 @@ class Response
 		//Response& operator=(const Response &src);
 		virtual	~Response();
 
-		std::map<std::string, std::string>&	getHeader(void) const;
+		std::map<std::string, std::string>&	getHeader(void);
 
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
 		void	makeCGIResponse(std::string& raw);

@@ -1,4 +1,5 @@
-#include "../includes/Response.hpp"
+#include "Response.hpp"
+#include "../libft_cpp/libft.hpp"
 
 Response::Response()
 {
@@ -20,7 +21,7 @@ Response::~Response()
 // 	(void)src;
 // }
 
-std::map<std::string, std::string>&	Response::getHeader(void) const
+std::map<std::string, std::string>&	Response::getHeader(void)
 {
 	return (this->header);
 }
@@ -61,8 +62,8 @@ void	Response::makeCGIResponse(std::string& raw)
 	// status-line
 	std::vector<std::string> status_line;
 	std::size_t status_sep = raw.find("\r\n");
-	ft_split(raw.substr(0, status_sep), " ", start_line);
-	this->status = ft_atoi(start_line[1]);
+	ft_split(raw.substr(0, status_sep), " ", status_line);
+	this->status = ft_atoi(status_line[1]);
 
 	// Header
 	std::vector<std::string> header_line;
@@ -82,6 +83,6 @@ void		Response::makeResponseHeader(Request& request)
 	// reqeust valid check -> Status Code
 
 	if (status != 0 && status != 200)
-		// 에러, 리다이렉션 체크
+		;// 에러, 리다이렉션 체크
 	// 헤더 기준
 }

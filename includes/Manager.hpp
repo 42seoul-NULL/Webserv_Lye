@@ -59,7 +59,7 @@ class PipeFD : public FDType
 		pid_t pid;
 		Client *to_client;
 		~PipeFD() {}
-}
+};
 
 class Manager
 {

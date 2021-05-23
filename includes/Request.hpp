@@ -5,7 +5,6 @@
 # include <vector>
 # include <map>
 # include "../libft_cpp/libft.hpp"
-# include "Client.hpp"
 
 // # define NEEDBODY -1	// 이건 사용하는 건지 안하는 건지 몰랑몰랑 아 몰라드 아몰라몰라 아몰레드
 # define CHUNKED 2
@@ -15,7 +14,7 @@
 # define PARSING_HEADER 0
 # define PARSING_BODY 1
 
-
+class Client;
 
 class Request
 {
@@ -50,6 +49,8 @@ class Request
 		const std::string&	getRawBody(void) const;
 		const std::string& getTempBody(void) const;
 		Client*	getClient(void) const;
+
+		void setClient(Client *client);
 
 	public:
 		void	initRequest(void);

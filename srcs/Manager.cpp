@@ -358,10 +358,11 @@ ResourceFD::ResourceFD(int type, pid_t pid, Client *client)
 	this->to_client = client;
 }
 
-PipeFD::PipeFD(int type, pid_t pid)
+PipeFD::PipeFD(int type, pid_t pid, Client *client)
 {
 	this->type = type;
 	this->pid = pid;
+	this->to_client = client;
 }
 
 int FDType::getType()

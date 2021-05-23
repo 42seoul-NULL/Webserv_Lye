@@ -239,7 +239,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 						{
 							// cgi 처리 필요
 							CGI cgi;
-							cgi.testCGICall(client->getRequest(), this->getPerfectLocation( *client->getServer(), client->getRequest().getUri()));
+							cgi.testCGICall(client->getRequest(), this->getPerfectLocation( *client->getServer(), client->getRequest().getUri()), /*extension 필요*/);
 							
 						}
 						else
@@ -254,9 +254,9 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					// resource read
 					// pid 확인 후 exit이면 read 후 response 작성
 					// exit이 아니라면 continue;
-					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd)
+					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					
-					resource_fd->to_client->getResponse().makeResponse(resource_fd, i, resource_fd->to_client->getRequest());
+					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{

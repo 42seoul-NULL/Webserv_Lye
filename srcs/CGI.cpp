@@ -1,11 +1,13 @@
-#include "../includes/CGI.hpp"
-#include "../includes/Manager.hpp"
+#include "CGI.hpp"
+#include "Manager.hpp"
+#include "Request.hpp"
+#include "Location.hpp"
 
 CGI::CGI(void)
 {
 	pipe(this->request_fd);
-	this->response_file_fd = open("res" + ft_itoa(this->request_fd[1]), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-	this->setCGIEnvironmentList();
+	this->response_file_fd = open(std::string("res" + ft_itoa(this->request_fd[1])).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
+	this->setCGIEnvironmentList();//어케할까여?
 }
 
 CGI::~CGI(void)
@@ -30,7 +32,7 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 		{
 			char **lst = (char **)malloc(sizeof(char *) * 3);
 			lst[0] = strdup("./php-mac/bin/php-cgi");
-			lst[1] = strdup(file_name);
+			lst[1] = strdup(file_name.c_str());
 			lst[2] = NULL;
 			if (execve("./php-mac/bin/php-cgi", lst, env) == -1)
 			{
@@ -59,7 +61,7 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 
 int		*CGI::getRequestFD(void) const
 {
-	return (this->request_fd);
+	return (const_cast<int *>(this->request_fd));// this->request_fd
 }
 
 int		CGI::getResponseFileFD(void) const

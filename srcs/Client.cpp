@@ -5,7 +5,7 @@ Client::Client()
 	this->server_socket_fd = -1;
 	this->socket_fd = -1;
 	this->status = REQUEST_RECEIVING;
-	this->request.getClient() = this;
+	this->request.setClient(this);
 }
 
 Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
