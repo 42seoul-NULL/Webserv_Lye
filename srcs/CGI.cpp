@@ -6,7 +6,7 @@
 CGI::CGI(void)
 {
 	pipe(this->request_fd);
-	this->response_file_fd = open(std::string("res" + ft_itoa(this->request_fd[1])).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
+	this->response_file_fd = open(("res" + ft_itoa(this->request_fd[1])).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
 	this->setCGIEnvironmentList();//어케할까여?
 }
 
@@ -20,8 +20,14 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 	char **env = this->setCGIEnvironment(request, location);
 
 	this->pid = fork();
-	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], new PipeFD(PIPE_FDTYPE, pid, request.getClient())));
-	write(this->request_fd[1], request.getRawBody().c_str(), request.getRawBody().length()); // block check
+	//pipe fd fd_table에 insert
+	PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
+	pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
+	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
+
+	ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
+	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
+	// write(this->request_fd[1], request.getRawBody().c_str(), request.getRawBody().length()); // block check
 	if (this->pid == 0)
 	{
 		// write(fd1[1], request.getRawBody().c_str(), request.getRawBody().length()); // read/write block check
@@ -34,7 +40,7 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 			lst[0] = strdup("./php-mac/bin/php-cgi");
 			lst[1] = strdup(file_name.c_str());
 			lst[2] = NULL;
-			if (execve("./php-mac/bin/php-cgi", lst, env) == -1)
+			if (execve("./php-mac/bin/php-cgi", lst, env) == -1) // select()에서 write될 때까지 기다리겠지?
 			{
 				std::cerr << "PHP CGI EXECUTE ERROR" << std::endl;
 				exit(1);

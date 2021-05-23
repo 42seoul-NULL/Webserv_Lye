@@ -365,6 +365,16 @@ PipeFD::PipeFD(int type, pid_t pid, Client *client)
 	this->to_client = client;
 }
 
+const std::string &PipeFD::getData()
+{
+	return (this->data);
+}
+
+void PipeFD::setData(std::string &data)
+{
+	this->data = data;
+}
+
 int FDType::getType()
 {
 	return (this->type);

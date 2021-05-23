@@ -234,17 +234,19 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					}
 					if (client->getStatus() == REQUEST_COMPLETE)
 					{
+						Location &location = this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() );
 						// response
-						if (client->getServer()->isCgiRequest( this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() ) ,  client->getRequest()))
+						if (client->getServer()->isCgiRequest(location,  client->getRequest()))
 						{
 							// cgi 처리 필요
 							CGI cgi;
-							cgi.testCGICall(client->getRequest(), this->getPerfectLocation( *client->getServer(), client->getRequest().getUri()), /*extension 필요*/);
+							cgi.testCGICall(client->getRequest(), location, /*extension 필요*/);
 							
 						}
 						else
 						{
 							// 일반 response 처리 필요
+							// 일반 response는 어디까지 여기서 처리해줘야 할까?
 						}
 						
 					}
@@ -258,10 +260,10 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
 				}
-				else if (fd->getType() == PIPE_FDTYPE)
-				{
-					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
-				}
+				// else if (fd->getType() == PIPE_FDTYPE) // pipe를 read pool에 넣지 않을거기 때문에
+				// {
+				// 	PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
+				// }
 			}
 			else if (FT_FD_ISSET(i, &cpy_writes))
 			{
@@ -275,11 +277,15 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					// resource write
+
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
+					write(i, pipefd->getData().c_str(), pipefd->getData().length()); // block 확인해야함
+					delete fd;
+					Manager::getInstance()->getFDTable().erase(i);
 				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_errors))
@@ -287,18 +293,24 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 				if (fd->getType() == SERVER_FDTYPE)
 				{
 					// 서버 에러 - 프로그램 터짐
+					throw "Server Error!";
 				}
-				else if (fd->getType() == CLIENT_FDTYPE)
+				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
 					disconnect_client(*(client_fd->to_client));
+					std::cerr << "client error!" << std::endl;
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
+					delete fd;
+					Manager::getInstance()->getFDTable().erase(i);
 					// 리소스 io error - internal server error
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
+					delete fd;
+					Manager::getInstance()->getFDTable().erase(i);
 					// pipe io error - internal server error
 				}
 			}
