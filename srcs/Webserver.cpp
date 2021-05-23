@@ -8,9 +8,9 @@
 
 Webserver::Webserver() : fd_max(-1)
 {
-	FT_FD_ZERO(&(this->reads));
-	FT_FD_ZERO(&(this->writes));
-	FT_FD_ZERO(&(this->errors));
+	FT_FD_ZERO(&(Manager::getInstance()->getReads()));
+	FT_FD_ZERO(&(Manager::getInstance()->getWrites()));
+	FT_FD_ZERO(&(Manager::getInstance()->getErrors()));
 }
 
 Webserver::~Webserver()
@@ -20,18 +20,12 @@ Webserver::~Webserver()
 
 Webserver::Webserver(const Webserver &src)
 {
-	this->reads = src.reads;
-	this->writes = src.writes;
-	this->errors = src.errors;
 	this->fd_max = src.fd_max;
 	this->servers.insert(src.servers.begin(), src.servers.end());
 }
 
 Webserver& Webserver::operator=(const Webserver &src)
 {
-	this->reads = src.reads;
-	this->writes = src.writes;
-	this->errors = src.errors;
 	this->fd_max = src.fd_max;
 	this->servers.clear();
 	this->servers.insert(src.servers.begin(), src.servers.end());
@@ -42,9 +36,9 @@ void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	FT_FD_CLR(client_socket_fd, &(this->reads));
-	FT_FD_CLR(client_socket_fd, &(this->writes));
-	FT_FD_CLR(client_socket_fd, &(this->errors));
+	FT_FD_CLR(client_socket_fd, &(Manager::getInstance()->getReads()));
+	FT_FD_CLR(client_socket_fd, &(Manager::getInstance()->getWrites()));
+	FT_FD_CLR(client_socket_fd, &(Manager::getInstance()->getErrors()));
 	close(client_socket_fd);
 	
 	Server *server = client.getServer();
@@ -95,8 +89,8 @@ bool	Webserver::initServers(int queue_size)
 		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 
 		// 서버소켓은 read 와 error 만 검사.
-		FT_FD_SET(iter->second.getSocketFd(), &(this->reads));
-		FT_FD_SET(iter->second.getSocketFd(), &(this->errors));
+		FT_FD_SET(iter->second.getSocketFd(), &(Manager::getInstance()->getReads()));
+		FT_FD_SET(iter->second.getSocketFd(), &(Manager::getInstance()->getErrors()));
 
 		
 		this->servers[iter->second.getSocketFd()] = iter->second;
@@ -194,9 +188,9 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 	{
 		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
 
-		cpy_reads = this->reads;
-		cpy_writes = this->writes;
-		cpy_errors = this->errors;
+		cpy_reads = Manager::getInstance()->getReads();
+		cpy_writes = Manager::getInstance()->getWrites();
+		cpy_errors = Manager::getInstance()->getErrors();
 
 		if ( (fd_num = select(this->fd_max + 1, &cpy_reads, &cpy_writes, &cpy_errors, &timeout)) == -1)
 			throw strerror(errno);
@@ -207,7 +201,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 		FDType *fd = NULL;
 		for (int i = 0; i <= this->fd_max; i++)
 		{	
-			if (Manager::getInstance()->getFDTable().count(i) == 0)
+			if (Manager::getInstance()->getFDTable().count(i) == 0) // fd_table에 없는 fd라면 continue
 				continue ;
 			fd = Manager::getInstance()->getFDTable()[i];
 
@@ -216,9 +210,9 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 				if (fd->getType() == SERVER_FDTYPE)
 				{
 					int client_socket_fd = this->servers[i].acceptClient(i, this->fd_max);
-					FT_FD_SET(client_socket_fd, &(this->reads));
-					FT_FD_SET(client_socket_fd, &(this->writes));
-					FT_FD_SET(client_socket_fd, &(this->errors));
+					FT_FD_SET(client_socket_fd, &(Manager::getInstance()->getReads()));
+					FT_FD_SET(client_socket_fd, &(Manager::getInstance()->getWrites()));
+					FT_FD_SET(client_socket_fd, &(Manager::getInstance()->getErrors()));
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
@@ -247,6 +241,13 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 						{
 							// 일반 response 처리 필요
 							// 일반 response는 어디까지 여기서 처리해줘야 할까?
+							
+							// auth 체크 - 401
+							// Allowed Method인지 체크 - 405
+
+							// 위에 애들 하고 나서 GET 또는 HEAD 시 파일 열기
+							// file exist 체크 - 404
+							// 잘 있으면 ResourceFD() 열고 Reads에서 응답까지
 						}
 						
 					}
@@ -259,6 +260,21 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
+
+					// tryMakeResponse에서 일어나야하는 일들
+					// 	CGI Resource라면
+					// 		CGI 프로세스가 EXIT 상태가 아니라면
+					// 			return;
+					// 	read(resource);
+					// 	delete resource_fd;
+					// 	FD_CLR();
+					// 	makeResponse() - 에러 나면 500
+					// 	setStatus(RESPONSE_READY)
+					// 	Method가 POST || PUT이면
+					// 		new ResourceFD()
+					// 		FD_SET(writes);
+						
+
 				}
 				// else if (fd->getType() == PIPE_FDTYPE) // pipe를 read pool에 넣지 않을거기 때문에
 				// {
@@ -273,10 +289,21 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					// 클라이언트 timeout disconnect
 
 					// 클라이언트 Response write
+					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
+					// if (fd->to_client->getStatus() == RESPONSE_READY)
+					// {
+					// 	write();
+					// 	clear();
+					// 	initRequest(); 등등
+					// }
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					// resource write
+
+					// 일반 응답에 대한 resource일 경우 (PUT 또는 POST겠지)
+					// 정해진 데이터 write만
+					// fd_table delete 해야함
 
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -286,6 +313,8 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					write(i, pipefd->getData().c_str(), pipefd->getData().length()); // block 확인해야함
 					delete fd;
 					Manager::getInstance()->getFDTable().erase(i);
+					// pipe fd일 경우
+					// 얘도 정해진 데이터 (request body)만 write하고 fd delete
 				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_errors))

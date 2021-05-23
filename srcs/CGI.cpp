@@ -20,13 +20,20 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 	char **env = this->setCGIEnvironment(request, location);
 
 	this->pid = fork();
+
 	//pipe fd fd_table에 insert
 	PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
 	pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
 	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
-
+	FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getWrites())); // pipe는 writes만 해주면 될 듯
+	FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getErrors()));
+	
+	//reponse_file_fd fd_table에 insert
 	ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
 	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
+	FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getReads())); // reponse file은 reads 해주면 될 듯
+	FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getErrors()));
+	
 	// write(this->request_fd[1], request.getRawBody().c_str(), request.getRawBody().length()); // block check
 	if (this->pid == 0)
 	{
@@ -61,7 +68,8 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 	}
 	else
 	{
-		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient())));
+		// Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient())));
+		return ;
 	}
 }
 

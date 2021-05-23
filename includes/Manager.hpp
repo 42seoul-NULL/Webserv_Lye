@@ -78,6 +78,9 @@ class Manager
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
 		std::map<int, FDType *> fd_table;
+		fd_set	reads;
+		fd_set	writes;
+		fd_set	errors;
 		Webserver webserver;
 
 	public	:
@@ -91,6 +94,9 @@ class Manager
 		bool	parseConfig(const char *config_file_path);
 		std::map<int, FDType *> &getFDTable();
 		Webserver &getWebserver();
+		fd_set &getReads(void);
+		fd_set &getWrites(void);
+		fd_set &getErrors(void);
 		//for test
 		void	show();
 };

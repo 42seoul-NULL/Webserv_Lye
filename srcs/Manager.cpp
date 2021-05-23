@@ -386,6 +386,20 @@ Webserver &Manager::getWebserver()
 	return (this->webserver);
 }
 
+fd_set &Manager::getReads(void)
+{
+	return (this->reads);
+}
+
+fd_set &Manager::getWrites(void)
+{
+	return (this->writes);
+}
+
+fd_set &Manager::getErrors(void)
+{
+	return (this->errors);
+}
 
 //for test
 void		Manager::show()

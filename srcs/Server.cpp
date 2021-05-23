@@ -106,7 +106,7 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	this->clients[client_socket].setLastRequestMs(ft_get_time());
 	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
-
+	//fd_table 세팅
 	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
 	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 

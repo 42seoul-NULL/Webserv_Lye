@@ -130,7 +130,7 @@ int Client::readRequest(void)
 	if (this->request.tryMakeRequest() == true)
 	{
 		this->status = REQUEST_COMPLETE;
-		// this->request.initRequest();
+		// this->request.initRequest(); // init은 Response에서 하는걸로 합시당!
 	}
 	std::cout << "Raw Body: |" << this->request.getRawBody() << "|" << std::endl;
 	std::cout << "Client status: |" << this->status << "|" << std::endl;

@@ -22,12 +22,7 @@ class Location;
 class Webserver
 {
 	private :
-		fd_set	reads;
-		fd_set	writes;
-		fd_set	errors;
-
 		int		fd_max;
-
 		std::map<int, Server> servers;
 
 		void	disconnect_client(Client &client);
