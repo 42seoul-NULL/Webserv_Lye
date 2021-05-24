@@ -91,12 +91,14 @@ class Manager
 		std::map<int, Server>& getServerConfigs();
 		std::map<std::string, std::string>& getMimeType();	
 		std::map<std::string, std::string>& getStatusCode();
+
 		bool	parseConfig(const char *config_file_path);
 		std::map<int, FDType *> &getFDTable();
 		Webserver &getWebserver();
 		fd_set &getReads(void);
 		fd_set &getWrites(void);
 		fd_set &getErrors(void);
+
 		//for test
 		void	show();
 };

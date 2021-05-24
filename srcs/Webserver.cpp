@@ -218,7 +218,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 				{
 					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 
-					//if  (ft_get_time() - ) // 타임아웃 체크 필요
+					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
 
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
@@ -234,22 +234,104 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 						{
 							// cgi 처리 필요
 							CGI cgi;
-							cgi.testCGICall(client->getRequest(), location, /*extension 필요*/);
+							cgi.testCGICall(client->getRequest(), location, /*extension 필요*/ );
 							
 						}
 						else
 						{
+							
 							// 일반 response 처리 필요
 							// 일반 response는 어디까지 여기서 처리해줘야 할까?
-							
+
 							// auth 체크 - 401
 							// Allowed Method인지 체크 - 405
+							
+							// client_max_body_size 체크
+							std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
+							Location &location = this->getPerfectLocation(*client->getServer(), uri);
+							if (client->getRequest().getRawBody().length() == static_cast<size_t>(location.getRequestMaxBodySize()))
+							{
+								client->getResponse().makeErrorResponse(413);
+								continue ;
+							}
 
-							// 위에 애들 하고 나서 GET 또는 HEAD 시 파일 열기
-							// file exist 체크 - 404
-							// 잘 있으면 ResourceFD() 열고 Reads에서 응답까지
+							if (client->getRequest().getMethod() == "GET" || client->getRequest().getMethod() == "HEAD")
+							{
+								std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
+								Location &location = this->getPerfectLocation(*client->getServer(), uri);
+								std::string path;
+
+								if (location.getRedirectReturn() != -1)
+								{
+									client->getResponse().makeRedirectResponse(location);
+									continue ;
+								}
+
+								std::string uri_autocheck = uri;
+								if (uri_autocheck[uri_autocheck.length() - 1] != '/')
+								{
+									uri_autocheck += '/';
+									if (uri_autocheck == location.getLocationName())
+									{
+										location.checkAutoIndex(uri_autocheck); // true / false => return => 처리
+									}
+									else // 하위 폴더
+									{
+										// std::size_t pos = uri_autocheck.find(location.getLocationName());
+										path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
+										
+										struct stat sb;
+										if (stat(path.c_str(), &sb) == -1)
+										{
+											client->getResponse().makeErrorResponse(404);
+										}
+									}
+								}
+								else // 무조건 uri 폴더
+								{
+									location.checkAutoIndex(uri_autocheck);
+									// res 따라서 404 / index Of / index file
+								}
+								
+								// list page 만들기
+								// 1. 클라이언트가 직접 파일 요청    2. index.html 존재해서 찾아줬음
+
+								client->getRequest().setPath(path);
+								
+								int fd = open(path.c_str(), O_RDONLY);
+								ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, client);
+								Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(fd, file_fd));
+								FT_FD_SET(fd, &(Manager::getInstance()->getReads()));
+								FT_FD_SET(fd, &(Manager::getInstance()->getErrors()));
+							}
+							else if (client->getRequest().getMethod() == "PUT" || client->getRequest().getMethod() == "POST")
+							{
+								std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
+								Location &location = this->getPerfectLocation(*client->getServer(), uri);
+
+								if (location.getRedirectReturn() != -1)
+								{
+									client->getResponse().makeRedirectResponse(location);
+									continue ;
+								}
+								std::string filename = location.getLocationName();
+								if (uri.find(filename) == std::string::npos)
+								{
+									client->getResponse().makeErrorResponse(404); // asdf
+									continue ;
+								}
+								filename.erase(0, filename.length());
+
+								std::string path = location.getRoot() + filename;
+								if (path[path.length() - 1] == '/')
+								{
+									client->getResponse().makeErrorResponse(400);
+								}
+								//file 만드는 함수 만들어주세요...
+								// from jayun
+							}
+							
 						}
-						
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
@@ -268,34 +350,39 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					// 	read(resource);
 					// 	delete resource_fd;
 					// 	FD_CLR();
+
 					// 	makeResponse() - 에러 나면 500
 					// 	setStatus(RESPONSE_READY)
-					// 	Method가 POST || PUT이면
-					// 		new ResourceFD()
-					// 		FD_SET(writes);
+
 						
 
 				}
-				// else if (fd->getType() == PIPE_FDTYPE) // pipe를 read pool에 넣지 않을거기 때문에
-				// {
-				// 	PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
-				// }
 			}
 			else if (FT_FD_ISSET(i, &cpy_writes))
 			{
 				if (fd->getType() == CLIENT_FDTYPE)
 				{
-					//if  (ft_get_time() - ) // 타임아웃 체크
-					// 클라이언트 timeout disconnect
-
+					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
+					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
-					// if (fd->to_client->getStatus() == RESPONSE_READY)
-					// {
-					// 	write();
-					// 	clear();
-					// 	initRequest(); 등등
-					// }
+					if (client->getStatus() == RESPONSE_COMPLETE)
+					{
+						if (client->getResponse().getRawResponse().length() > BUFFER_SIZE)
+						{
+							write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
+							client->getResponse().getRawResponse().erase(0, BUFFER_SIZE);
+							continue ;
+						}
+						else
+						{
+							write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().length());
+							client->getResponse().getRawResponse().clear();
+						}
+						client->getRequest().initRequest();
+						client->getResponse().initResponse();
+						client->setStatus(REQUEST_RECEIVING);
+					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
@@ -304,15 +391,41 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					// 일반 응답에 대한 resource일 경우 (PUT 또는 POST겠지)
 					// 정해진 데이터 write만
 					// fd_table delete 해야함
-
+					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
+					if (resource_fd->getData().length() > BUFFER_SIZE)
+					{
+						write(i, resource_fd->getData().c_str(), BUFFER_SIZE);
+						resource_fd->getData().erase(0, BUFFER_SIZE);
+						continue ;
+					}
+					else
+					{
+						write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
+						resource_fd->getData().clear();
+						delete fd;
+						Manager::getInstance()->getFDTable[i] = NULL;
+						Manager::getInstance()->getFDTable.erase(i);
+					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
-					write(i, pipefd->getData().c_str(), pipefd->getData().length()); // block 확인해야함
-					delete fd;
-					Manager::getInstance()->getFDTable().erase(i);
+
+					if (pipefd->getData().length() > BUFFER_SIZE)
+					{
+						write(i, pipefd->getData().c_str(), BUFFER_SIZE);
+						pipefd->getData().erase(0, BUFFER_SIZE);
+						continue ;
+					}
+					else
+					{
+						write(i, pipefd->getData().c_str(), pipefd->getData().length());
+						pipefd->getData().clear();
+						delete fd;
+						Manager::getInstance()->getFDTable[i] = NULL;
+						Manager::getInstance()->getFDTable.erase(i);
+					}
 					// pipe fd일 경우
 					// 얘도 정해진 데이터 (request body)만 write하고 fd delete
 				}
@@ -329,18 +442,32 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
 					disconnect_client(*(client_fd->to_client));
 					std::cerr << "client error!" << std::endl;
+					close(i);
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
+					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
+
+					client->getResponse().makeErrorResponse(500);
 					delete fd;
 					Manager::getInstance()->getFDTable().erase(i);
-					// 리소스 io error - internal server error
+					if (FT_FD_ISSET(i, &(Manager::getInstance()->getReads())))
+						FT_FD_CLR(i, &(Manager::getInstance()->getReads()));
+					if (FT_FD_ISSET(i, &(Manager::getInstance()->getWrites())))
+						FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
+					FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
+					close(i);
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
+					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
+
+					client->getResponse().makeErrorResponse(500);
 					delete fd;
 					Manager::getInstance()->getFDTable().erase(i);
-					// pipe io error - internal server error
+					FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
+					FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
+					close(i);
 				}
 			}
 		}

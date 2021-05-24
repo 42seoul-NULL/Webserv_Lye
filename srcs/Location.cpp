@@ -160,3 +160,18 @@ void	Location::show()
 	for (std::map<int, std::string>::iterator iter = this->error_pages.begin(); iter != this->error_pages.end(); iter++)
 		std::cout << iter->first << " | " << iter->second << std::endl;
 }
+
+void	Location::checkAutoIndex(std::string &uri)
+{
+	std::string uri_autocheck = uri;
+	if (uri[uri.length() - 1] != '/')
+		uri_autocheck += '/';
+	if (location.getLocationName() == uri_autocheck)
+	{
+		struct stat sb;
+		for (std::list<std::string>::const_iterator iter = location.getIndex().begin(); iter != location.getIndex().end(); iter++)
+		{
+			if 
+		}
+	}
+}

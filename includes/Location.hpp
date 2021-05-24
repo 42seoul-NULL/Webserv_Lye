@@ -8,7 +8,8 @@
 
 class Location
 {
-	private	:
+	private:
+		std::string		location_name;
 		std::string		root;
 		std::list<std::string> index;
 		std::list<std::string> allow_methods;
@@ -37,6 +38,7 @@ class Location
 		void			setRedirectReturn(int redirect_return);
 		void			setRedirectAddr(const std::string &redirect_addr);
 
+		const std::string &getLocationName();
 		const std::string &getRoot();
 		std::list<std::string> &getIndex();
 		std::list<std::string> &getAllowMethods();
@@ -48,6 +50,10 @@ class Location
 		int		getRedirectReturn();
 		const std::string &getRedirectAddr();
 		std::map<int, std::string> &getErrorPages();
+
+		void setLocationName(std::string &locaton_name);
+
+		int		checkAutoIndex(std::string &uri);
 
 		//for test//
 		void	show();

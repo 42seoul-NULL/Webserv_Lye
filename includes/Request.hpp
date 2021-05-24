@@ -32,6 +32,8 @@ class Request
 		std::string temp_body;
 		int	status;
 		int	type;
+
+		std::string path;
 		Client	*client;
 
 	public:
@@ -48,10 +50,12 @@ class Request
 		const	std::string&	getRawHeader(void) const;
 		const std::string&	getRawBody(void) const;
 		const std::string& getTempBody(void) const;
-		Client*	getClient(void) const;
+		Client*	getClient(void);
+		const std::string &getPath();
 
 		void setClient(Client *client);
-
+		void setPath(std::string &path);
+		
 	public:
 		void	initRequest(void);
 		bool	tryMakeRequest(void);

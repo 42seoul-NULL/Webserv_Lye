@@ -27,7 +27,6 @@ class Webserver
 
 		void	disconnect_client(Client &client);
 		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
-		Location &getPerfectLocation(Server &server, const std::string &uri);
 
 	public	:
 		Webserver();
@@ -36,6 +35,7 @@ class Webserver
 		Webserver &operator=(const Webserver &src);
 		
 
+		Location &getPerfectLocation(Server &server, const std::string &uri);
 		bool	initServers(int queue_size);
 		bool	run(struct timeval timeout, unsigned int buffer_size);
 };

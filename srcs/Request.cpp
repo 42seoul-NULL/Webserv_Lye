@@ -77,7 +77,7 @@ const std::string&	Request::getTempBody(void) const
 	return (this->temp_body);
 }
 
-Client*	Request::getClient(void) const
+Client*	Request::getClient(void)
 {
 	return (this->client);
 }
