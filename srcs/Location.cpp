@@ -19,6 +19,7 @@ Location::Location(const Location &src)
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
+	this->location_name = src.location_name;
 }
 
 Location &Location::operator=(const Location &src)
@@ -34,6 +35,7 @@ Location &Location::operator=(const Location &src)
 	this->auth_key = src.auth_key;
 	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
+	this->location_name = src.location_name;
 	return (*this);
 }
 
@@ -82,6 +84,11 @@ void		Location::setRedirectAddr(const std::string &redirect_addr)
 {
 	this->redirect_addr = redirect_addr;
 	return ;
+}
+
+const std::string &Location::getLocationName(void)
+{
+	return (this->location_name);
 }
 
 const std::string &Location::getRoot()
@@ -137,6 +144,11 @@ int		Location::getRedirectReturn()
 const std::string &Location::getRedirectAddr()
 {
 	return (this->redirect_addr);
+}
+
+void	Location::setLocationName(std::string &location_name)
+{
+	this->location_name = location_name;
 }
 
 //for test

@@ -6,7 +6,6 @@
 # include <map>
 # include "../libft_cpp/libft.hpp"
 
-// # define NEEDBODY -1	// 이건 사용하는 건지 안하는 건지 몰랑몰랑 아 몰라드 아몰라몰라 아몰레드
 # define CHUNKED 2
 # define CONTENT_LENGTH 1
 # define NOBODY 0
@@ -51,7 +50,7 @@ class Request
 		const std::string&	getRawBody(void) const;
 		const std::string& getTempBody(void) const;
 		Client*	getClient(void);
-		const std::string &getPath();
+		std::string &getPath(void);
 
 		void setClient(Client *client);
 		void setPath(std::string &path);

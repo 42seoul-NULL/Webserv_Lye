@@ -23,9 +23,9 @@ class CGI
 		int		*getRequestFD(void) const;
 		int		getResponseFileFD(void) const;
 
-		void	testCGICall(const Request& request, Location& location, std::string& extension);
-		void	setCGIEnvironmentList(const Request& request);
-		char	**setCGIEnvironment(const Request& request, Location &location);
+		void	testCGICall(Request& request, Location& location, std::string& extension);
+		void	setCGIEnvironmentList(Request& request);
+		char	**setCGIEnvironment(Request& request, Location &location);
 		char	**makeCGIEnvironment(std::map<std::string, std::string> &cgi_env);
 };
 

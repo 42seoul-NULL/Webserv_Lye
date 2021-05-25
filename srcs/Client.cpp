@@ -6,11 +6,14 @@ Client::Client()
 	this->socket_fd = -1;
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
+	this->response.setClient(this);
 }
 
 Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
 {
-
+	this->status = REQUEST_RECEIVING;
+	this->request.setClient(this);
+	this->response.setClient(this);
 }
 
 Client::~Client()

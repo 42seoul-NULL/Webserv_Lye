@@ -9,6 +9,8 @@
 
 class Request;
 class Location;
+class ResourceFD;
+class Client;
 
 class Response
 {
@@ -18,6 +20,8 @@ class Response
 		std::string body;
 		int status;
 		std::string raw;
+		Client *client;
+		bool	seek_flag;
 
 	public:
 		Response();
@@ -27,6 +31,10 @@ class Response
 
 		std::map<std::string, std::string>&	getHeaders(void);
 		std::string &getRawResponse(void);
+		Client *getClient();
+		std::string &getBody(void);
+
+		void setClient(Client *client);
 
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
 		void	applyCGIResponse(std::string& raw);
@@ -46,12 +54,13 @@ class Response
 
 		void	makeRedirectResponse(Location &location);
 		void	makeStartLine();
-		void	makeErrorResponse(int status);
+		void	makeErrorResponse(int status, Location *location);
 		void	makeAutoIndexResponse(std::string &path);
 		// void	makeCGIStartLine();
 		
 		void	makeRawResponse(void);
 		void	initResponse(void);
+		void	generateErrorPage(int status);
 
 };
 

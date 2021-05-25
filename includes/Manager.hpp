@@ -15,7 +15,8 @@ typedef enum	e_FDType
 	CLIENT_FDTYPE,
 	RESOURCE_FDTYPE,
 	PIPE_FDTYPE,
-	CGI_RESOURCE_FDTYPE
+	CGI_RESOURCE_FDTYPE,
+	ERROR_RESOURCE_FDTYPE,
 }				t_FDType;
 
 class FDType
@@ -58,7 +59,8 @@ class ResourceFD : public FDType
 
 class PipeFD : public FDType
 {
-	std::string data;
+	private:
+		std::string data;
 	public:
 		PipeFD(int type, pid_t pid, Client *client);
 		pid_t pid;
@@ -102,7 +104,7 @@ class Manager
 		fd_set &getReads(void);
 		fd_set &getWrites(void);
 		fd_set &getErrors(void);
-		int decode_base64(const char * text, char * dst, int numBytes)
+		int decode_base64(const char * text, char * dst, int numBytes);
 
 		//for test
 		void	show();

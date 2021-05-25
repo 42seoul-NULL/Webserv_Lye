@@ -2,6 +2,7 @@
 #include "Manager.hpp"
 #include "Location.hpp"
 #include "Client.hpp"
+#include "CGI.hpp"
 
 Server::Server() : port(-1)
 {
@@ -117,14 +118,12 @@ int Server::acceptClient(int server_fd, int &fd_max)
 bool Server::isCgiRequest(Location &location, Request &request)
 {
 	std::vector<std::string> &cgi_extensions = location.getCgiExtensions();
-
 	// uri에서 cgi extension 파싱하여 location의 그것과 매칭되는지 확인
 	// 매칭되면 cgi 처리, 아니면 일단 response 만들러 ㄱㄱ
 
 	size_t dot_pos = request.getUri().find('.');
 	if (dot_pos == std::string::npos)
 		return (false);
-
 	size_t ext_end = dot_pos;
 	while (ext_end != request.getUri().length() && request.getUri()[ext_end] != '/' && request.getUri()[ext_end] != '?')
 		ext_end++;
@@ -132,6 +131,8 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
 		return (false);
+	CGI	cgi;
+	cgi.testCGICall(request, location, res);
 	return (true);
 }
 
@@ -152,6 +153,18 @@ int    Server::createFileWithDirectory(std::string path)
     }
     fd = open(path.c_str(), O_CREAT | O_TRUNC | O_EXCL, 0777);
 	return (fd);
+}
+
+bool Server::isCorrectAuth(Location &location, Client &client)
+{
+	char auth_key[200];
+
+	std::size_t found = client.getRequest().getHeaders()["Authorization"].find(' ');
+	Manager::getInstance()->decode_base64(client.getRequest().getHeaders()["Authorization"].substr(found + 1).c_str(), auth_key, client.getRequest().getHeaders()["Authorization"].length());
+
+	if (std::string(auth_key) != location.getAuthKey())
+		return (false);
+	return (true);
 }
 
 //for test

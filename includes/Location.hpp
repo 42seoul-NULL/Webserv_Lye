@@ -38,7 +38,7 @@ class Location
 		void			setRedirectReturn(int redirect_return);
 		void			setRedirectAddr(const std::string &redirect_addr);
 
-		const std::string &getLocationName();
+		const std::string &getLocationName(void);
 		const std::string &getRoot();
 		std::list<std::string> &getIndex();
 		std::list<std::string> &getAllowMethods();

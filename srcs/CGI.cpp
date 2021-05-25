@@ -6,8 +6,7 @@
 CGI::CGI(void)
 {
 	pipe(this->request_fd);
-	this->response_file_fd = open(("res" + ft_itoa(this->request_fd[1])).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-	this->setCGIEnvironmentList();//어케할까여?
+	this->response_file_fd = open((".res_" + ft_itoa(this->request_fd[1])).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
 }
 
 CGI::~CGI(void)
@@ -15,25 +14,12 @@ CGI::~CGI(void)
 
 }
 
-void	CGI::testCGICall(const Request& request, Location& location, std::string& file_name)
+void	CGI::testCGICall(Request& request, Location& location, std::string& file_name)
 {
+	this->setCGIEnvironmentList(request);
 	char **env = this->setCGIEnvironment(request, location);
 
 	this->pid = fork();
-
-	//pipe fd fd_table에 insert
-	PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
-	pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
-	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
-	FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getWrites())); // pipe는 writes만 해주면 될 듯
-	FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getErrors()));
-	
-	//reponse_file_fd fd_table에 insert
-	ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
-	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
-	FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getReads())); // reponse file은 reads 해주면 될 듯
-	FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getErrors()));
-	
 	// write(this->request_fd[1], request.getRawBody().c_str(), request.getRawBody().length()); // block check
 	if (this->pid == 0)
 	{
@@ -68,7 +54,27 @@ void	CGI::testCGICall(const Request& request, Location& location, std::string& f
 	}
 	else
 	{
-		// Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient())));
+		//pipe fd fd_table에 insert
+		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
+		pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
+		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
+		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getWrites())); // pipe는 writes만 해주면 될 듯
+		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getErrors()));
+
+		if (Manager::getInstance()->getWebserver().getFDMax() < this->request_fd[1])
+		{
+			Manager::getInstance()->getWebserver().setFDMax(this->request_fd[1]);
+		}
+		
+		//reponse_file_fd fd_table에 insert
+		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
+		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
+		FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getReads())); // reponse file은 reads 해주면 될 듯
+		FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getErrors()));
+		if (Manager::getInstance()->getWebserver().getFDMax() < this->response_file_fd)
+		{
+			Manager::getInstance()->getWebserver().setFDMax(this->response_file_fd);
+		}
 		return ;
 	}
 }
@@ -83,7 +89,7 @@ int		CGI::getResponseFileFD(void) const
 	return (this->response_file_fd);
 }
 
-void	CGI::setCGIEnvironmentList(const Request& request)
+void	CGI::setCGIEnvironmentList(Request& request)
 {
 	this->CGI_environment_list.push_back("AUTH_TYPE");
 	this->CGI_environment_list.push_back("CONTENT_LENGTH");
@@ -109,7 +115,7 @@ void	CGI::setCGIEnvironmentList(const Request& request)
 	}
 }
 
-char	**CGI::setCGIEnvironment(const Request& request, Location &location)
+char	**CGI::setCGIEnvironment(Request& request, Location &location)
 {
 	std::map<std::string, std::string> cgi_env;
 
@@ -166,7 +172,7 @@ char	**CGI::setCGIEnvironment(const Request& request, Location &location)
 	cgi_env.insert(std::pair<std::string, std::string>("SERVER_NAME", "127.0.0.1"));
 	// cgi_env.insert(std::pair<std::string, std::string>("SERVER_PORT", "8180")); // 상의
 	cgi_env.insert(std::pair<std::string, std::string>("SERVER_PROTOCOL", "HTTP/1.1"));
-	cgi_env.insert(std::pair<std::string, std::string>("SERVER_SOFTWARE", "GOLDPIG/1.0")); 
+	cgi_env.insert(std::pair<std::string, std::string>("SERVER_SOFTWARE", "HyeonSkkiDashi/1.0")); 
 	// http header insert
 	for (std::map<std::string, std::string>::const_iterator iter = request.getHeaders().begin(); iter != request.getHeaders().end(); iter++)
 	{

@@ -82,6 +82,11 @@ Client*	Request::getClient(void)
 	return (this->client);
 }
 
+std::string	&Request::getPath(void)
+{
+	return (this->path);
+}
+
 ///////////////////////////
 /////////getter_end////////
 ///////////////////////////
@@ -91,11 +96,17 @@ void Request::setClient(Client *client)
 	this->client = client;
 }
 
+void	Request::setPath(std::string &path)
+{
+	this->path = path;
+}
+
 
 /////////////////////////// public func /////////////////////
 
 void	Request::initRequest(void)
 {
+	this->raw_request.clear();
 	this->method.clear();
 	this->uri.clear();
 	this->http_version.clear();
@@ -105,6 +116,7 @@ void	Request::initRequest(void)
 	this->temp_body.clear();
 	this->status = PARSING_HEADER;
 	this->type = NOBODY;
+	this->path.clear();
 }
 
 bool	Request::tryMakeRequest(void)

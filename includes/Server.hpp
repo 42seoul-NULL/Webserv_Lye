@@ -45,6 +45,7 @@ class Server
 		int acceptClient(int server_fd, int &fd_max);
 		bool isCgiRequest(Location &location, Request &request);
 		int	createFileWithDirectory(std::string path);
+		bool isCorrectAuth(Location &location, Client &client);
 
 		//for test//
 		void	show();

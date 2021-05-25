@@ -17,7 +17,7 @@ int	main(int ac, char **av)
 	try
 	{
 		Manager::getInstance()->getWebserver().initServers(5);
-		Manager::getInstance()->getWebserver().run(timeout, 100);
+		Manager::getInstance()->getWebserver().run(timeout);
 	}
 	catch(const char *e)
 	{

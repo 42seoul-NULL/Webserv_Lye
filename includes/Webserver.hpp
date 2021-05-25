@@ -33,11 +33,13 @@ class Webserver
 		virtual ~Webserver();
 		Webserver(const Webserver &src);
 		Webserver &operator=(const Webserver &src);
-		
+
+		void	setFDMax(int fd_max);
+		int		getFDMax(void);
 
 		Location &getPerfectLocation(Server &server, const std::string &uri);
 		bool	initServers(int queue_size);
-		bool	run(struct timeval timeout, unsigned int buffer_size);
+		bool	run(struct timeval timeout);
 };
 
 #endif

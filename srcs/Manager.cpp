@@ -248,7 +248,6 @@ bool	Manager::parseConfig(const char *config_file_path)
 				iter++;
 				location_name = *iter;
 				instance->server_configs[key].getLocations()[location_name].setLocationName(location_name);
-				
 			}
 			else if (*iter == "error_page")
 			{

@@ -9,7 +9,7 @@
 #include <list>
 #include <dirent.h>
 
-Response::Response()
+Response::Response() : seek_flag(false)
 {
 	this->status = DEFAULT_STATUS;
 }
@@ -39,6 +39,16 @@ std::string &Response::getRawResponse(void)
 	return (this->raw);
 }
 
+std::string	&Response::getBody(void)
+{
+	return (this->body);
+}
+
+void		Response::setClient(Client *client)
+{
+	this->client = client;
+}
+
 void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request)
 {
 	char	buf[BUFFER_SIZE];
@@ -50,7 +60,13 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		int status;
 		if (waitpid(resource_fd->pid, &status, WNOHANG) == 0) // CGI Process 안끝남
 			return ;
-		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) != -1)
+		if (seek_flag == false)
+		{
+			lseek(fd, 0, SEEK_SET);
+			this->seek_flag = true;
+		}
+		read_size = read(fd, buf, BUFFER_SIZE - 1);
+		if (read_size > 0) // stat file size check 해서 작성하자....
 		{
 			buf[read_size] = '\0';
 			cgi_raw += std::string(buf);
@@ -63,18 +79,19 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		close(fd);
 		if (read_size == -1)
 		{
-			this->makeErrorResponse(500); // 500 Error
+			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
 		this->applyCGIResponse(cgi_raw); // status 저장, content_type 저장, body 저장
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
 		this->makeRawResponse();
+		request.getClient()->setStatus(RESPONSE_COMPLETE);
 	}
 	else
 	{
 		this->body.clear();
-		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) != -1)
+		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) > 0)
 		{
 			buf[read_size] = '\0';
 			this->body += std::string(buf);
@@ -87,15 +104,15 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		close(fd);
 		if (read_size == -1)
 		{
-			this->makeErrorResponse(500); // 500 Error
+			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
 		this->makeRawResponse();
+		request.getClient()->setStatus(RESPONSE_COMPLETE);
 	}
-
 }
 
 void	Response::applyCGIResponse(std::string& cgi_raw)
@@ -104,6 +121,10 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
+	for (std::vector<std::string>::const_iterator iter = status_line.begin(); iter != status_line.end(); iter++)
+	{
+		std::cout << *iter << std::endl;
+	}
 	this->status = ft_atoi(status_line[1]);
 
 	// Header
@@ -293,15 +314,43 @@ void	Response::initResponse(void)
 	this->raw.clear();
 	this->headers.clear();
 	this->status = DEFAULT_STATUS;
+	this->seek_flag = false;
 }
 
-void	Response::makeErrorResponse(int status)
+void	Response::makeErrorResponse(int status, Location *location)
 {
 	this->status = status;
 	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
 	this->generateDate();
 	this->generateServer();
-	if ()
+	if (location == NULL || location->getErrorPages().count(status) == 0)
+	{
+		this->generateErrorPage(status);
+		this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
+		if (status == 401)
+			this->generateWWWAuthenticate();
+		this->makeStartLine();
+		this->makeRawResponse();
+		this->client->setStatus(RESPONSE_COMPLETE);
+		return ;
+	}
+	else
+	{
+		int fd = open(location->getErrorPages()[status].c_str(), O_RDONLY);
+		if (fd == -1)
+		{
+			makeErrorResponse(500, NULL);
+			return ;
+		}
+		ResourceFD *error_resource = new ResourceFD(ERROR_RESOURCE_FDTYPE, this->client);
+		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(fd, error_resource));
+		FT_FD_SET(fd, &(Manager::getInstance()->getReads()));
+		FT_FD_SET(fd, &(Manager::getInstance()->getErrors()));
+		if (Manager::getInstance()->getWebserver().getFDMax() < fd)
+		{
+			Manager::getInstance()->getWebserver().setFDMax(fd);
+		}
+	}
 }
 
 void	Response::makeAutoIndexResponse(std::string &path)
@@ -311,7 +360,7 @@ void	Response::makeAutoIndexResponse(std::string &path)
 
 	if((dir_ptr = opendir(path.c_str())) == NULL)
 	{
-		this->makeErrorResponse(500);
+		this->makeErrorResponse(500, NULL);
 		return ;
 	}
 
@@ -338,7 +387,7 @@ void	Response::makeAutoIndexResponse(std::string &path)
 		{
 			this->start_line.clear();
 			this->body.clear();
-			this->makeErrorResponse(500);
+			this->makeErrorResponse(500, NULL);
 			return ;
 		}
 		timeinfo = localtime(&sb.st_mtime);
@@ -366,4 +415,23 @@ void	Response::makeAutoIndexResponse(std::string &path)
 	
 	this->makeStartLine();
 	this->makeRawResponse();
+}
+
+void		Response::generateErrorPage(int status)
+{
+	this->status = status;
+
+	this->body.clear();
+	this->body += "<html>\r\n";
+	this->body += "<head>\r\n";
+	this->body += "<title>" + ft_itoa(this->status) + " " + Manager::getInstance()->getStatusCode().find(ft_itoa(this->status))->second + "</title>\r\n";
+	this->body += "</head>\r\n";
+	this->body += "<body bgcolor=\"white\">\r\n";
+	this->body += "<center>\r\n";
+	this->body += "<h1>" + ft_itoa(this->status) + " " + Manager::getInstance()->getStatusCode().find(ft_itoa(this->status))->second + "</h1>\r\n";
+	this->body += "</center>\r\n";
+	this->body += "<hr>\r\n";
+	this->body += "<center>HyeonSkkiDashi/1.0</center>\r\n";
+	this->body += "</body>\r\n";
+	this->body += "</html>";
 }
