@@ -50,6 +50,7 @@ class Response
 		void	makeRedirectResponse(Location &location);
 		void	makeStartLine();
 		void	makeErrorResponse(int status);
+		void	makeAutoIndexResponse(std::string &path);
 		// void	makeCGIStartLine();
 		
 		void	makeRawResponse(void);

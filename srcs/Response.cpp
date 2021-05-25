@@ -7,6 +7,7 @@
 #include "Manager.hpp"
 #include "Location.hpp"
 #include <list>
+#include <dirent.h>
 
 Response::Response()
 {
@@ -280,4 +281,66 @@ void	Response::initResponse(void)
 	this->raw.clear();
 	this->headers.clear();
 	this->status = DEFAULT_STATUS;
+}
+
+void	Response::makeAutoIndexResponse(std::string &path)
+{
+	DIR		*dir_ptr;
+	struct dirent	*file;
+
+	if((dir_ptr = opendir(path.c_str())) == NULL)
+	{
+		this->makeErrorResponse(500);
+		return ;
+	}
+
+	this->status = 200;
+	this->makeStartLine();
+
+	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
+	this->generateDate();
+	this->generateServer();
+
+	this->body += "<html>\r\n";
+	this->body += "<head>\r\n";
+	this->body += "<title>Index of " + path + "</title>\r\n";
+	this->body += "</head>\r\n";
+	this->body += "<body bgcolor=\"white\">\r\n";
+	this->body += "<h1>Index of " + path + "</h1>\r\n";
+	this->body += "<hr>\r\n";
+	this->body += "<pre>\r\n";
+
+	while((file = readdir(dir_ptr)) != NULL)
+	{
+		struct stat	sb;
+		struct tm*	timeinfo;
+		char buffer[4096];
+		std::string name = std::string(file->d_name);
+		if (file->d_type == 4)
+			name += '/';
+		this->body += "<a href=\"" + name + "\">" + name + "</a>\r\n";
+
+		if (stat(path.c_str(), &sb) == -1)
+		{
+			this->start_line.clear();
+			this->body.clear();
+			this->makeErrorResponse(500);
+			return ;
+		}
+		timeinfo = localtime(&sb.st_mtime);
+		strftime(buffer, 4096, "%d-%b-%Y %H:%M", timeinfo);
+		this->body += "\"                                        " + std::string(buffer) + "                   ";
+		if (S_ISDIR(sb.st_mode))
+			this->body += "-\"\r\n";
+		else
+		{
+			this->body.erase(this->body.length() - ft_itoa(sb.st_size).length() + 1);
+			this->body += ft_itoa(sb.st_size) + "\"\r\n";
+		}
+	}
+
+	this->body += "</pre>\r\n";
+	this->body += "<hr>\r\n";
+	this->body += "</body>\r\n";
+	this->body += "</html>\r\n";
 }
