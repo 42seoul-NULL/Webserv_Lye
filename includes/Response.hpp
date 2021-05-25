@@ -35,6 +35,7 @@ class Response
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
 		void	applyCGIResponse(std::string& raw);
 		void	makeResponseHeader(Request &request);
+		void	makeCGIResponseHeader(Request& request);
 		void	generateAllow(Request& request);
 		void	generateDate(void);
 		void	generateLastModified(Request& request);

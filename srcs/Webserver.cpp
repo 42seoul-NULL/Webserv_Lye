@@ -298,7 +298,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 										}
 										else if (res == "Index of") //autoindex list up
 										{
-											client->getResponse().makeAutoIndexResponse();
+											client->getResponse().makeAutoIndexResponse(path);
 											continue ;
 										}
 										else
@@ -330,7 +330,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 									}
 									else if (res == "Index of") //autoindex list up
 									{
-										client->getResponse().makeAutoIndexResponse();
+										client->getResponse().makeAutoIndexResponse(path);
 										continue ;
 									}
 									else

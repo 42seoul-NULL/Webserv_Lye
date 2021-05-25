@@ -42,18 +42,17 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 {
 	char	buf[BUFFER_SIZE];
 	int		read_size;
-	std::string	raw;
+	std::string	cgi_raw;
 	
 	if (resource_fd->getType() == CGI_RESOURCE_FDTYPE)
 	{
-		this->body.clear();
 		int status;
 		if (waitpid(resource_fd->pid, &status, WNOHANG) == 0) // CGI Process 안끝남
 			return ;
 		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) != -1)
 		{
 			buf[read_size] = '\0';
-			body += std::string(buf);
+			cgi_raw += std::string(buf);
 		}
 		delete resource_fd;
 		Manager::getInstance()->getFDTable()[fd] = NULL;
@@ -66,9 +65,9 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->makeErrorResponse(500); // 500 Error
 			return ;
 		}
-			
-		this->applyCGIResponse(raw);
-		raw.clear();
+		this->applyCGIResponse(cgi_raw); // status 저장, content_type 저장, body 저장
+		this->makeCGIResponseHeader(request);
+		this->makeStartLine();
 	}
 	else
 	{
@@ -76,7 +75,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) != -1)
 		{
 			buf[read_size] = '\0';
-			body += std::string(buf);
+			this->body += std::string(buf);
 		}
 		delete resource_fd;
 		Manager::getInstance()->getFDTable()[fd] = NULL;
@@ -89,72 +88,54 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->makeErrorResponse(500); // 500 Error
 			return ;
 		}
-
+		this->status = 200;
+		this->makeResponseHeader(request);
+		this->makeStartLine();
 	}
 
-	this->makeResponseHeader(request);
-	this->makeStartLine();
-
-	// if ((read_size = read(fd, buf, BUFFER_SIZE - 1)) == -1)
-	// 	; //internal server error
-	// buf[read_size] = '\0';
 }
 
-void	Response::applyCGIResponse(std::string& raw)
+void	Response::applyCGIResponse(std::string& cgi_raw)
 {
 	// status-line
 	std::vector<std::string> status_line;
-	std::size_t status_sep = raw.find("\r\n");
-	ft_split(raw.substr(0, status_sep), " ", status_line);
+	std::size_t status_sep = cgi_raw.find("\r\n");
+	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
 	this->status = ft_atoi(status_line[1]);
 
 	// Header
 	std::vector<std::string> header_line;
-	std::size_t header_sep = raw.find("\r\n\r\n");
-	ft_split(raw.substr(status_sep + 2, header_sep - status_sep), " ", header_line);
+	std::size_t header_sep = cgi_raw.find("\r\n\r\n");
+	ft_split(cgi_raw.substr(status_sep + 2, header_sep - status_sep), " ", header_line);
 	if (*(--header_line[1].end()) == ';')
 		header_line[1].erase(--header_line[1].end());
 	this->headers.insert(std::pair<std::string, std::string>("Content-Type", header_line[1]));
 
 	// Body
-
-	this->body = raw.substr(header_sep + 2);
-	this->makeRawResponse();
+	this->body = cgi_raw.substr(header_sep + 2);
 }
 
 void		Response::makeResponseHeader(Request& request)
 {
-	// reqeust valid check -> Status Code
+	this->generateDate();
+	this->generateLastModified(request);
+	this->generateContentLanguage();
+	this->generateContentLocation(request);
+	this->generateContentType(request);
+	this->generateServer();
+}
 
-	if (status != 0 && status != 200)
-		; // 에러, 리다이렉션 체크
-	// 헤더 기준
+void		Response::makeCGIResponseHeader(Request& request)
+{
+	this->generateDate();
+	this->generateContentLanguage();
+	this->generateContentLocation(request);
+	this->generateContentType(request);
+	this->generateServer();
 }
 
 void	Response::generateAllow(Request& request)
 {
-	
-	// std::map<std::string, Location>::iterator location_iter = server.getLocations().find(request.getUri());
-	//std::map<std::string, Location>::iterator location_iter 
-	// if (location_iter != server.getLocations().end())
-	// {
-	// 	std::list<std::string>::iterator iter = location_iter->second.getAllowMethods().begin();
-	// 	for (; iter != location_iter->second.getAllowMethods().end(); iter++)
-	// 	{
-	// 		// Request에서 URI 처리 후 맞는 Location_Iter Key 찾은 후 작성
-	// 		this->allow += *iter;
-	// 		if (iter != --location_iter->second.getAllowMethods().end())
-	// 		{
-	// 			this->allow += ", ";
-	// 		}
-	// 	}
-	// }
-	// else
-	// {
-	// 	Manager::getInstance()->getWebserver().getPerfectLocation(*request.getClient()->getServer(), request.getUri());
-	// 	std::cout << "Not found Server" << std::endl;
-	// }
-
 	std::string allow;
 	Location &test = Manager::getInstance()->getWebserver().getPerfectLocation(*request.getClient()->getServer(), request.getUri());
 	for (std::list<std::string>::const_iterator iter = test.getAllowMethods().begin(); iter != test.getAllowMethods().end(); iter++)
@@ -232,7 +213,6 @@ void	Response::generateContentType(Request &request)
 void	Response::generateLocation(Location &location)
 {
 	// 300번대 체크 ㄱㄱ
-	// 201 
 	this->status = location.getRedirectReturn();
 	this->headers.insert(std::pair<std::string, std::string>("Location", location.getRedirectAddr()));
 }
