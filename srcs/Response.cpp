@@ -297,34 +297,11 @@ void	Response::initResponse(void)
 
 void	Response::makeErrorResponse(int status)
 {
-	if (400)
-	{
-		this->status = 400;
-	}
-	else if (401)
-	{
-
-	}
-	else if (404)
-	{
-		type;
-		date
-		server
-	}
-	else if (405)
-	{
-		
-	}
-	else if (413)
-	{
-		retry-after;
-		date
-		server
-	}
-	else if (500)
-	{
-
-	}
+	this->status = status;
+	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
+	this->generateDate();
+	this->generateServer();
+	if ()
 }
 
 void	Response::makeAutoIndexResponse(std::string &path)
