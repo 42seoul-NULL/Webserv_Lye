@@ -135,6 +135,24 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	return (true);
 }
 
+int    Server::createFileWithDirectory(std::string path)
+{
+    size_t  pos;
+    size_t  n;
+    int     fd;
+
+    n = 0;
+    pos = path.find("/", n);
+    while (pos != std::string::npos)
+    {
+        std::string temp = path.substr(0, pos);
+        mkdir(temp.c_str(), 0777);
+        n = pos + 1;
+        pos = path.find("/", n);
+    }
+    fd = open(path.c_str(), O_CREAT | O_TRUNC | O_EXCL, 0777);
+	return (fd);
+}
 
 //for test
 void		Server::show()
@@ -149,4 +167,4 @@ void		Server::show()
 		iter->second.show();
 	}
 	std::cout << "============= location end ===============" << std::endl;
-}
+}	

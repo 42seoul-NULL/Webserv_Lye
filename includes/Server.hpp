@@ -44,6 +44,8 @@ class Server
 		std::map<std::string, Location> &getLocations();
 		int acceptClient(int server_fd, int &fd_max);
 		bool isCgiRequest(Location &location, Request &request);
+		int	createFileWithDirectory(std::string path);
+
 		//for test//
 		void	show();
 };

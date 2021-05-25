@@ -53,7 +53,7 @@ class Location
 
 		void setLocationName(std::string &locaton_name);
 
-		int		checkAutoIndex(std::string &uri);
+		std::string		checkAutoIndex(std::string &uri);
 
 		//for test//
 		void	show();

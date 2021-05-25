@@ -229,38 +229,54 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					if (client->getStatus() == REQUEST_COMPLETE)
 					{
 						Location &location = this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() );
+
+						// auth 체크 - 401
+						if (location.getAuthKey() != ""
+							&& (client->getRequest().getHeaders().count("Authorization") == 0 // decode 필요
+							|| location.getAuthKey() != client->getRequest().getHeaders()["Authorization"]))
+						{
+							client->getResponse().makeErrorResponse(401);
+							continue ;
+						}
+
+						// Allowed Method인지 체크 - 405
+						if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client->getRequest().getMethod()) == location.getAllowMethods().end())
+						{
+							client->getResponse().makeErrorResponse(405);
+							continue ;
+						}
+						
+						// client_max_body_size 체크
+						if (client->getRequest().getRawBody().length() > static_cast<size_t>(location.getRequestMaxBodySize()))
+						{
+							client->getResponse().makeErrorResponse(413);
+							continue ;
+						}
+
 						// response
 						if (client->getServer()->isCgiRequest(location,  client->getRequest()))
 						{
 							// cgi 처리 필요
 							CGI cgi;
-							cgi.testCGICall(client->getRequest(), location, /*extension 필요*/ );
+							cgi.testCGICall(client->getRequest(), location,  /* extension 필요 */ );
 							
 						}
 						else
 						{
-							
 							// 일반 response 처리 필요
 							// 일반 response는 어디까지 여기서 처리해줘야 할까?
-
-							// auth 체크 - 401
-							// Allowed Method인지 체크 - 405
-							
-							// client_max_body_size 체크
 							std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
 							Location &location = this->getPerfectLocation(*client->getServer(), uri);
-							if (client->getRequest().getRawBody().length() == static_cast<size_t>(location.getRequestMaxBodySize()))
-							{
-								client->getResponse().makeErrorResponse(413);
-								continue ;
-							}
+
+							
 
 							if (client->getRequest().getMethod() == "GET" || client->getRequest().getMethod() == "HEAD")
 							{
 								std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
 								Location &location = this->getPerfectLocation(*client->getServer(), uri);
 								std::string path;
-
+								
+								//리다이렉션 체크
 								if (location.getRedirectReturn() != -1)
 								{
 									client->getResponse().makeRedirectResponse(location);
@@ -271,30 +287,56 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 								if (uri_autocheck[uri_autocheck.length() - 1] != '/')
 								{
 									uri_autocheck += '/';
-									if (uri_autocheck == location.getLocationName())
+									if (uri_autocheck == location.getLocationName()) // location uri일 경우
 									{
-										location.checkAutoIndex(uri_autocheck); // true / false => return => 처리
+										path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
+										std::string res = location.checkAutoIndex(uri_autocheck); // true / false => return => 처리
+										if (res == "404")
+										{
+											client->getResponse().makeErrorResponse(404);
+											continue ;
+										}
+										else if (res == "Index of") //autoindex list up
+										{
+											client->getResponse().makeAutoIndexResponse();
+											continue ;
+										}
+										else
+											path = res;
 									}
-									else // 하위 폴더
+									else // 로케이션 하위 파일 - 무조건 파일
 									{
 										// std::size_t pos = uri_autocheck.find(location.getLocationName());
 										path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
+										path.erase(--(path.end())); //끝에 '/' 날려
 										
 										struct stat sb;
 										if (stat(path.c_str(), &sb) == -1)
 										{
 											client->getResponse().makeErrorResponse(404);
+											continue ;
 										}
 									}
 								}
-								else // 무조건 uri 폴더
+								else // 무조건 디렉토리 uri
 								{
-									location.checkAutoIndex(uri_autocheck);
+									path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
+									std::string res = location.checkAutoIndex(uri_autocheck);
 									// res 따라서 404 / index Of / index file
+									if (res == "404")
+									{
+										client->getResponse().makeErrorResponse(404);
+										continue ;
+									}
+									else if (res == "Index of") //autoindex list up
+									{
+										client->getResponse().makeAutoIndexResponse();
+										continue ;
+									}
+									else
+										path = res;
 								}
-								
-								// list page 만들기
-								// 1. 클라이언트가 직접 파일 요청    2. index.html 존재해서 찾아줬음
+							
 
 								client->getRequest().setPath(path);
 								
@@ -309,7 +351,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 								std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
 								Location &location = this->getPerfectLocation(*client->getServer(), uri);
 
-								if (location.getRedirectReturn() != -1)
+								if (location.getRedirectReturn() != -1) 
 								{
 									client->getResponse().makeRedirectResponse(location);
 									continue ;
@@ -326,11 +368,17 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 								if (path[path.length() - 1] == '/')
 								{
 									client->getResponse().makeErrorResponse(400);
+									continue ;
 								}
-								//file 만드는 함수 만들어주세요...
-								// from jayun
+
+								int fd = client->getServer()->createFileWithDirectory(path);
+
+								ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, client);
+								file_fd->setData(const_cast<std::string &>(client->getRequest().getRawBody()));
+								Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(fd, file_fd));
+								FT_FD_SET(fd, &(Manager::getInstance()->getWrites()));
+								FT_FD_SET(fd, &(Manager::getInstance()->getErrors()));
 							}
-							
 						}
 					}
 				}
@@ -370,18 +418,23 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					{
 						if (client->getResponse().getRawResponse().length() > BUFFER_SIZE)
 						{
-							write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
-							client->getResponse().getRawResponse().erase(0, BUFFER_SIZE);
+							int write_size = write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
+							client->getResponse().getRawResponse().erase(0, write_size);
 							continue ;
 						}
 						else
 						{
-							write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().length());
+							int write_size = write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().length());
+							if (write_size < client->getResponse().getRawResponse().length())
+							{
+								client->getResponse().getRawResponse().erase(0, write_size);
+								continue ;
+							}
 							client->getResponse().getRawResponse().clear();
+							client->getRequest().initRequest();
+							client->getResponse().initResponse();
+							client->setStatus(REQUEST_RECEIVING);
 						}
-						client->getRequest().initRequest();
-						client->getResponse().initResponse();
-						client->setStatus(REQUEST_RECEIVING);
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
@@ -394,17 +447,25 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					if (resource_fd->getData().length() > BUFFER_SIZE)
 					{
-						write(i, resource_fd->getData().c_str(), BUFFER_SIZE);
-						resource_fd->getData().erase(0, BUFFER_SIZE);
+						int write_size = write(i, resource_fd->getData().c_str(), BUFFER_SIZE);
+						resource_fd->getData().erase(0, write_size);
 						continue ;
 					}
 					else
 					{
-						write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
+						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
+						if (write_size < resource_fd->getData().length())
+						{
+							resource_fd->getData().erase(0, write_size);
+							continue ;
+						}
+
 						resource_fd->getData().clear();
 						delete fd;
 						Manager::getInstance()->getFDTable[i] = NULL;
 						Manager::getInstance()->getFDTable.erase(i);
+						FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
+						FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -414,20 +475,26 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 
 					if (pipefd->getData().length() > BUFFER_SIZE)
 					{
-						write(i, pipefd->getData().c_str(), BUFFER_SIZE);
-						pipefd->getData().erase(0, BUFFER_SIZE);
+						int write_size = write(i, pipefd->getData().c_str(), BUFFER_SIZE);
+						pipefd->getData().erase(0, write_size);
 						continue ;
 					}
 					else
 					{
-						write(i, pipefd->getData().c_str(), pipefd->getData().length());
+						int write_size = write(i, pipefd->getData().c_str(), pipefd->getData().length());
+						if (write_size < pipefd->getData().length())
+						{
+							pipefd->getData().erase(0, write_size);
+							continue;
+						}
+
 						pipefd->getData().clear();
 						delete fd;
 						Manager::getInstance()->getFDTable[i] = NULL;
 						Manager::getInstance()->getFDTable.erase(i);
+						FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
+						FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
 					}
-					// pipe fd일 경우
-					// 얘도 정해진 데이터 (request body)만 write하고 fd delete
 				}
 			}
 			else if (FT_FD_ISSET(i, &cpy_errors))

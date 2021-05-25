@@ -46,39 +46,51 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	
 	if (resource_fd->getType() == CGI_RESOURCE_FDTYPE)
 	{
+		this->body.clear();
 		int status;
-		if (waitpid(resource_fd->pid, &status, WNOHANG) == 0)
-		{
-			// CGI Process 안끝남
+		if (waitpid(resource_fd->pid, &status, WNOHANG) == 0) // CGI Process 안끝남
 			return ;
-		}
 		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) != -1)
 		{
 			buf[read_size] = '\0';
 			body += std::string(buf);
 		}
+		delete resource_fd;
+		Manager::getInstance()->getFDTable()[fd] = NULL;
+		Manager::getInstance()->getFDTable().erase(fd);
+		FT_FD_CLR(fd, &(Manager::getInstance()->getReads()));
+		FT_FD_CLR(fd, &(Manager::getInstance()->getErrors()));
+		close(fd);
 		if (read_size == -1)
+		{
 			this->makeErrorResponse(500); // 500 Error
+			return ;
+		}
+			
 		this->applyCGIResponse(raw);
 		raw.clear();
 	}
 	else
 	{
-		body.clear();
+		this->body.clear();
 		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) != -1)
 		{
 			buf[read_size] = '\0';
 			body += std::string(buf);
 		}
+		delete resource_fd;
+		Manager::getInstance()->getFDTable()[fd] = NULL;
+		Manager::getInstance()->getFDTable().erase(fd);
+		FT_FD_CLR(fd, &(Manager::getInstance()->getReads()));
+		FT_FD_CLR(fd, &(Manager::getInstance()->getErrors()));
+		close(fd);
 		if (read_size == -1)
+		{
 			this->makeErrorResponse(500); // 500 Error
+			return ;
+		}
 
 	}
-	delete resource_fd;
-	Manager::getInstance()->getFDTable()[fd] = NULL;
-	Manager::getInstance()->getFDTable().erase(fd);
-	FT_FD_CLR(fd, &(Manager::getInstance()->getReads()));
-	FT_FD_CLR(fd, &(Manager::getInstance()->getErrors()));
 
 	this->makeResponseHeader(request);
 	this->makeStartLine();
@@ -279,4 +291,13 @@ void	Response::makeRawResponse(void)
 	this->raw += "\r\n";
 
 	this->raw += this->body;
+}
+
+void	Response::initResponse(void)
+{
+	this->start_line.clear();
+	this->body.clear();
+	this->raw.clear();
+	this->headers.clear();
+	this->status = DEFAULT_STATUS;
 }

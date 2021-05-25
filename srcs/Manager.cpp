@@ -360,6 +360,16 @@ ResourceFD::ResourceFD(int type, pid_t pid, Client *client)
 	this->to_client = client;
 }
 
+std::string &ResourceFD::getData()
+{
+	return (this->data);
+}
+
+void ResourceFD::setData(std::string &data)
+{
+	this->data = data;
+}
+
 PipeFD::PipeFD(int type, pid_t pid, Client *client)
 {
 	this->type = type;
@@ -367,7 +377,7 @@ PipeFD::PipeFD(int type, pid_t pid, Client *client)
 	this->to_client = client;
 }
 
-const std::string &PipeFD::getData()
+std::string &PipeFD::getData()
 {
 	return (this->data);
 }
@@ -381,7 +391,6 @@ int FDType::getType()
 {
 	return (this->type);
 }
-
 
 Webserver &Manager::getWebserver()
 {

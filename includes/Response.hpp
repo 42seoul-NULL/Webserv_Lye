@@ -52,6 +52,7 @@ class Response
 		// void	makeCGIStartLine();
 		
 		void	makeRawResponse(void);
+		void	initResponse(void);
 
 };
 

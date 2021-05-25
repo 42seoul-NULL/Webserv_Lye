@@ -44,11 +44,15 @@ class ClientFD : public FDType
 
 class ResourceFD : public FDType
 {
+	private:
+		std::string data;
 	public :
 		ResourceFD(int type, pid_t pid, Client *client);
 		ResourceFD(int type, Client *client);
 		pid_t pid;
 		Client *to_client;
+		std::string &getData();
+		void setData(std::string &data);
 		~ResourceFD() {}
 };
 
@@ -59,7 +63,7 @@ class PipeFD : public FDType
 		PipeFD(int type, pid_t pid, Client *client);
 		pid_t pid;
 		Client *to_client;
-		const std::string &getData();
+		std::string &getData();
 		void setData(std::string &data);
 		~PipeFD() {}
 };

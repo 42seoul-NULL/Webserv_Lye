@@ -1,4 +1,5 @@
 #include "../includes/Location.hpp"
+#include <sys/stat.h>
 
 Location::Location() : request_max_body_size(-1), redirect_return(-1)
 {
@@ -161,17 +162,26 @@ void	Location::show()
 		std::cout << iter->first << " | " << iter->second << std::endl;
 }
 
-void	Location::checkAutoIndex(std::string &uri)
+std::string	Location::checkAutoIndex(std::string &uri)
 {
-	std::string uri_autocheck = uri;
-	if (uri[uri.length() - 1] != '/')
-		uri_autocheck += '/';
-	if (location.getLocationName() == uri_autocheck)
+	std::string temp = uri;
+	struct stat sb;
+	bool found = false;
+
+	for (std::list<std::string>::const_iterator iter = this->index.begin(); iter != this->index.end(); iter++)
 	{
-		struct stat sb;
-		for (std::list<std::string>::const_iterator iter = location.getIndex().begin(); iter != location.getIndex().end(); iter++)
+		temp = uri;
+		temp += *iter;
+		if (stat(temp.c_str(), &sb) == 0)
 		{
-			if 
+			found = true;
+			break ;
 		}
 	}
+	if (found == true)
+		return (temp);
+	else if (this->auto_index == true)
+		return ("Index of");
+	else
+		return ("404");
 }
