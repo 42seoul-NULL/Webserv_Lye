@@ -102,6 +102,7 @@ class Manager
 		fd_set &getReads(void);
 		fd_set &getWrites(void);
 		fd_set &getErrors(void);
+		int decode_base64(const char * text, char * dst, int numBytes)
 
 		//for test
 		void	show();

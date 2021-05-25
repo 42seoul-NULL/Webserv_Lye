@@ -412,6 +412,47 @@ fd_set &Manager::getErrors(void)
 	return (this->errors);
 }
 
+int Manager::decode_base64(const char * text, char * dst, int numBytes)
+{
+    const char* cp;
+    int space_idx = 0, phase;
+    int d, prev_d = 0;
+    char c;
+    space_idx = 0;
+    phase = 0;
+    for (cp = text; *cp != '\0'; ++cp) {
+        d = Manager::decodeMimeBase64[(int)*cp];
+        if (d != -1) {
+            switch (phase) {
+            case 0:
+                ++phase;
+                break;
+            case 1:
+                c = ((prev_d << 2) | ((d & 0x30) >> 4));
+                if (space_idx < numBytes)
+                    dst[space_idx++] = c;
+                ++phase;
+                break;
+            case 2:
+                c = (((prev_d & 0xf) << 4) | ((d & 0x3c) >> 2));
+                if (space_idx < numBytes)
+                    dst[space_idx++] = c;
+                ++phase;
+                break;
+            case 3:
+                c = (((prev_d & 0x03) << 6) | d);
+                if (space_idx < numBytes)
+                    dst[space_idx++] = c;
+                phase = 0;
+                break;
+            }
+            prev_d = d;
+        }
+    }
+    return space_idx;
+}
+
+
 //for test
 void		Manager::show()
 {
