@@ -69,6 +69,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		this->applyCGIResponse(cgi_raw); // status 저장, content_type 저장, body 저장
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
+		this->makeRawResponse();
 	}
 	else
 	{
@@ -92,6 +93,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
+		this->makeRawResponse();
 	}
 
 }
@@ -116,6 +118,8 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	this->body = cgi_raw.substr(header_sep + 2);
 }
 
+
+
 void		Response::makeResponseHeader(Request& request)
 {
 	this->generateDate();
@@ -124,6 +128,8 @@ void		Response::makeResponseHeader(Request& request)
 	this->generateContentLocation(request);
 	this->generateContentType(request);
 	this->generateServer();
+	this->generateContentLength();
+
 }
 
 void		Response::makeCGIResponseHeader(Request& request)
@@ -133,6 +139,7 @@ void		Response::makeCGIResponseHeader(Request& request)
 	this->generateContentLocation(request);
 	this->generateContentType(request);
 	this->generateServer();
+	this->generateContentLength();
 }
 
 void	Response::generateAllow(Request& request)
@@ -190,6 +197,11 @@ void	Response::generateContentLanguage(void)
 void	Response::generateContentLocation(Request &request)
 {
 	this->headers.insert(std::pair<std::string, std::string>("Content-Location", request.getPath()));
+}
+
+void	Response::generateContentLength(void)
+{
+	this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
 }
 
 void	Response::generateContentType(Request &request)
@@ -283,6 +295,38 @@ void	Response::initResponse(void)
 	this->status = DEFAULT_STATUS;
 }
 
+void	Response::makeErrorResponse(int status)
+{
+	if (400)
+	{
+		this->status = 400;
+	}
+	else if (401)
+	{
+
+	}
+	else if (404)
+	{
+		type;
+		date
+		server
+	}
+	else if (405)
+	{
+		
+	}
+	else if (413)
+	{
+		retry-after;
+		date
+		server
+	}
+	else if (500)
+	{
+
+	}
+}
+
 void	Response::makeAutoIndexResponse(std::string &path)
 {
 	DIR		*dir_ptr;
@@ -293,13 +337,6 @@ void	Response::makeAutoIndexResponse(std::string &path)
 		this->makeErrorResponse(500);
 		return ;
 	}
-
-	this->status = 200;
-	this->makeStartLine();
-
-	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
-	this->generateDate();
-	this->generateServer();
 
 	this->body += "<html>\r\n";
 	this->body += "<head>\r\n";
@@ -342,5 +379,14 @@ void	Response::makeAutoIndexResponse(std::string &path)
 	this->body += "</pre>\r\n";
 	this->body += "<hr>\r\n";
 	this->body += "</body>\r\n";
-	this->body += "</html>\r\n";
+	this->body += "</html>";
+	
+	this->status = 200;
+	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
+	this->generateDate();
+	this->generateServer();
+	this->generateContentLength();
+	
+	this->makeStartLine();
+	this->makeRawResponse();
 }

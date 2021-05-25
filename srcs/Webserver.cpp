@@ -230,6 +230,12 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					{
 						Location &location = this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() );
 
+////////////////////////////////////////////////////////////////////////////////
+						char auth_key[200];
+
+						Manager::getInstance()->decode_base64(client->getRequest().getHeaders()["Authorization"].c_str(), auth_key, client->getRequest().getHeaders()["Authorization"].length());
+						if (std::string(auth_key) != client->getRequest().getHeaders()["Authorization"])
+							틀림;
 						// auth 체크 - 401
 						if (location.getAuthKey() != ""
 							&& (client->getRequest().getHeaders().count("Authorization") == 0 // decode 필요
@@ -238,7 +244,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 							client->getResponse().makeErrorResponse(401);
 							continue ;
 						}
-
+//////////////////////////////////////////////////////////////////////////
 						// Allowed Method인지 체크 - 405
 						if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client->getRequest().getMethod()) == location.getAllowMethods().end())
 						{
@@ -390,6 +396,7 @@ bool	Webserver::run(struct timeval timeout, unsigned int buffer_size)
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
+
 
 					// tryMakeResponse에서 일어나야하는 일들
 					// 	CGI Resource라면

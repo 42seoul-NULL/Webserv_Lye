@@ -16,11 +16,7 @@ class Response
 		std::string start_line;
 		std::map<std::string, std::string> headers;
 		std::string body;
-		// std::string allow;
-		// std::string date;
-
 		int status;
-
 		std::string raw;
 
 	public:
@@ -41,6 +37,7 @@ class Response
 		void	generateLastModified(Request& request);
 		void	generateContentLanguage(void);
 		void	generateContentLocation(Request &request);
+		void	generateContentLength(void);
 		void	generateContentType(Request &request);
 		void	generateLocation(Location &loc);
 		void	generateRetryAfter(void);
