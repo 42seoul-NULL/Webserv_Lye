@@ -149,9 +149,8 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 
 void		Response::tryMakePutResponse(Request &request)
 {
-	this->status = 200;
+	this->status = 201;
 	this->generateDate();
-	this->generateLastModified(request);
 	this->generateServer();
 	this->generateContentLength();
 	this->makeStartLine();
@@ -383,6 +382,8 @@ void	Response::makeErrorResponse(int status, Location *location)
 	{
 		this->generateErrorPage(status);
 		this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
+		if (this->client->getRequest().getMethod() == "HEAD")
+			this->body.clear();
 		if (status == 401)
 			this->generateWWWAuthenticate();
 		this->makeStartLine();

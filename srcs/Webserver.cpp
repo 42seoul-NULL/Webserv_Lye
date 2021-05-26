@@ -332,7 +332,7 @@ bool	Webserver::run(struct timeval timeout)
 
 							
 
-							if (client->getRequest().getMethod() == "GET" || client->getRequest().getMethod() == "HEAD")
+							if (client->getRequest().getMethod() == "GET" || client->getRequest().getMethod() == "HEAD" || client->getRequest().getMethod() == "POST")
 							{
 								std::cout << "get or head" << std::endl;
 
@@ -391,7 +391,7 @@ bool	Webserver::run(struct timeval timeout)
 								}
 								std::cout << "client read cycle end" << std::endl;
 							}
-							else if (client->getRequest().getMethod() == "PUT" || client->getRequest().getMethod() == "POST")
+							else if (client->getRequest().getMethod() == "PUT")
 							{
 								// std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
 								// Location &location = this->getPerfectLocation(*client->getServer(), uri);
@@ -426,10 +426,10 @@ bool	Webserver::run(struct timeval timeout)
 								{
 									path.erase(--(path.end()));
 								}
+								struct stat sb;
+								stat(path.c_str(), &sb);
 
-								
-
-								if (path[path.length() - 1] == '/')
+								if (path[path.length() - 1] == '/' || S_ISDIR(sb.st_mode))
 								{
 									std::cout << "put to directory" << std::endl;
 									std::cout << path << std::endl;
@@ -437,6 +437,7 @@ bool	Webserver::run(struct timeval timeout)
 									continue ;
 								}
 
+								std::cout << "path: " << path << std::endl;
 								client->getRequest().setPath(path);
 								int put_fd = client->getServer()->createFileWithDirectory(path);
 								std::cout << "resource fd :" << put_fd << std::endl;
@@ -458,7 +459,7 @@ bool	Webserver::run(struct timeval timeout)
 					// resource read
 					// pid 확인 후 exit이면 read 후 response 작성
 					// exit이 아니라면 continue;
-					std::cout << "try to read resource" << std::endl;
+					// std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
@@ -514,7 +515,11 @@ bool	Webserver::run(struct timeval timeout)
 					// std::cout << "try to response" << std::endl;
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
+						
 						std::cout << "ready to response" << std::endl;
+						std::cout << "Content Length: " << client->getResponse().getHeaders()["Content-Length"] << std::endl;
+						if (client->getResponse().getHeaders()["Content-Length"] == "0")
+							std::cout << "raw:" << client->getResponse().getRawResponse() << std::endl;
 						if (client->getResponse().getRawResponse().length() > BUFFER_SIZE)
 						{
 							int write_size = write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
