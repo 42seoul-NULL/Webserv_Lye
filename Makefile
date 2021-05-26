@@ -35,6 +35,8 @@ dbg		:
 
 test		:
 					${CC} ${DCF} ${LIB_NAME} -I $(INCDIR) -o ${NAME}
+					rm -rf ./tests/put_test/file_should_exist_after
+					rm -rf .res_*
 					./webserv configs/test.conf
 
 fclean		:

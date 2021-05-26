@@ -1,41 +1,41 @@
 #include "../includes/Location.hpp"
 #include <sys/stat.h>
 
-Location::Location() : request_max_body_size(-1), redirect_return(-1)
+Location::Location() : request_max_body_size(-1), auto_index(false), redirect_return(-1)
 {
 	
 }
 
 Location::Location(const Location &src)
 {
-	this->root	=	src.root;
+	this->location_name = src.location_name;
+	this->root = src.root;
 	this->index.assign(src.index.begin(), src.index.end());
 	this->allow_methods.assign(src.allow_methods.begin(), src.allow_methods.end());
-	this->request_max_body_size = src.request_max_body_size;
 	this->error_pages.insert(src.error_pages.begin(), src.error_pages.end());
+	this->request_max_body_size = src.request_max_body_size;
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extensions = src.cgi_extensions;
+	this->cgi_extensions.assign(src.cgi_extensions.begin(), src.cgi_extensions.end());
 	this->auth_key = src.auth_key;
-	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
-	this->location_name = src.location_name;
+	this->redirect_addr = src.redirect_addr;
 }
 
 Location &Location::operator=(const Location &src)
 {
-	this->root	=	src.root;
+	this->location_name = src.location_name;
+	this->root = src.root;
 	this->index.assign(src.index.begin(), src.index.end());
 	this->allow_methods.assign(src.allow_methods.begin(), src.allow_methods.end());
-	this->request_max_body_size = src.request_max_body_size;
 	this->error_pages.insert(src.error_pages.begin(), src.error_pages.end());
+	this->request_max_body_size = src.request_max_body_size;
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extensions = src.cgi_extensions;
+	this->cgi_extensions.assign(src.cgi_extensions.begin(), src.cgi_extensions.end());
 	this->auth_key = src.auth_key;
-	this->redirect_addr = src.redirect_addr;
 	this->redirect_return = src.redirect_return;
-	this->location_name = src.location_name;
+	this->redirect_addr = src.redirect_addr;
 	return (*this);
 }
 

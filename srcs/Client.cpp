@@ -7,6 +7,8 @@ Client::Client()
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
 	this->response.setClient(this);
+	this->last_request_ms = 0;
+	this->server = NULL;
 }
 
 Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
@@ -14,34 +16,14 @@ Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_so
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
 	this->response.setClient(this);
+	this->last_request_ms = 0;
+	this->server = NULL;
 }
 
 Client::~Client()
 {
 	
 }
-
-// Client::Client(const Client &src)
-// {
-// 	status = src.status;
-// 	server_socket_fd = src.server_socket_fd;
-// 	socket_fd = src.socket_fd;
-// 	remain_body = src.remain_body;
-// 	last_request_ms = src.last_request_ms;
-// 	request = src.request;
-// 	response = src.response;
-// }
-
-// Client& Client::operator=(const Client &src)
-// {
-// 	status = src.status;
-// 	server_socket_fd = src.server_socket_fd;
-// 	socket_fd = src.socket_fd;
-// 	remain_body = src.remain_body;
-// 	last_request_ms = src.last_request_ms;
-// 	request = src.request;
-// 	response = src.response;
-// }
 
 void	Client::setLastRequestMs(unsigned long last_request_ms)
 {
@@ -63,12 +45,6 @@ void	Client::setServerSocketFd(int server_socket_fd)
 void	Client::setSocketFd(int socket_fd)
 {
 	this->socket_fd = socket_fd;
-	return ;
-}
-
-void	Client::setRemainBody(long long remain_body)
-{
-	this->remain_body = remain_body;
 	return ;
 }
 
@@ -102,11 +78,6 @@ int		Client::getSocketFd()
 	return (this->socket_fd);
 }
 
-long long		Client::getRemainBody()
-{
-	return (this->remain_body);
-}
-
 unsigned long	Client::getLastRequestMs()
 {
 	return (this->last_request_ms);
@@ -133,13 +104,16 @@ int Client::readRequest(void)
 	if (this->request.tryMakeRequest() == true)
 	{
 		this->status = REQUEST_COMPLETE;
+		std::cout << "method:" << this->request.getMethod() << std::endl;
+		std::cout << "uri:" << this->request.getUri() << std::endl;
+
 		// this->request.initRequest(); // init은 Response에서 하는걸로 합시당!
 	}
-	std::cout << "Raw Body: |" << this->request.getRawBody() << "|" << std::endl;
-	std::cout << "Client status: |" << this->status << "|" << std::endl;
-	std::cout << "Raw Request: |" << this->request.getRawRequest() <<"|" << std::endl;
-	std::cout << "Temp Body: |" << this->request.getTempBody() << "|" << std::endl;
-	std::cout << std::endl;
+	// std::cout << "Raw Body: |" << this->request.getRawBody() << "|" << std::endl;
+	// std::cout << "Client status: |" << this->status << "|" << std::endl;
+	// std::cout << "Raw Request: |" << this->request.getRawRequest() << "|" << std::endl;
+	// std::cout << "Temp Body: |" << this->request.getTempBody() << "|" << std::endl;
+	// std::cout << std::endl;
 
 	return (1);
 	

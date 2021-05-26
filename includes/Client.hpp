@@ -17,7 +17,6 @@ class Client
 		t_status		status;
 		int				server_socket_fd;
 		int				socket_fd;
-		long long		remain_body;
 		unsigned long	last_request_ms;
 		Request			request;
 		Response		response;
@@ -33,7 +32,6 @@ class Client
 		void		setSocketFd(int socket_fd);
 		void		setServerSocketFd(int server_socket_fd);
 		void		setStatus(t_status status);
-		void		setRemainBody(long long remain_body);
 		void		setLastRequestMs(unsigned long last_request_ms);
 		void		setServer(Server &server);
 

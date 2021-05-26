@@ -19,9 +19,11 @@ class Response
 		std::map<std::string, std::string> headers;
 		std::string body;
 		int status;
-		std::string raw;
+		std::string raw_response;
 		Client *client;
 		bool	seek_flag;
+		std::string cgi_raw;
+		unsigned long long file_size;
 
 	public:
 		Response();
@@ -37,7 +39,7 @@ class Response
 		void setClient(Client *client);
 
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
-		void	tryMakePutResponse();
+		void	tryMakePutResponse(Request &request);
 		void	applyCGIResponse(std::string& raw);
 		void	makeResponseHeader(Request &request);
 		void	makeCGIResponseHeader(Request& request);

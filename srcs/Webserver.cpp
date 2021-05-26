@@ -6,6 +6,7 @@
 #include "Location.hpp"
 #include "CGI.hpp"
 
+
 Webserver::Webserver() : fd_max(-1)
 {
 	
@@ -50,7 +51,43 @@ void	Webserver::disconnect_client(Client &client)
 	close(client_socket_fd);
 	
 	Server *server = client.getServer();
+	Client *client_pointer = &client;
 	server->getClients().erase(client_socket_fd);
+
+
+	ResourceFD *resource_fdtype = NULL;
+	PipeFD *pipe_fdtype = NULL;
+	for (std::map<int, FDType*>::iterator iter = Manager::getInstance()->getFDTable().begin(); iter != Manager::getInstance()->getFDTable().end(); )
+	{
+		if ((resource_fdtype = dynamic_cast<ResourceFD *>(iter->second)))
+		{
+			if (resource_fdtype->to_client == client_pointer)
+			{
+				FT_FD_CLR(iter->first, &(Manager::getInstance()->getReads()));
+				FT_FD_CLR(iter->first, &(Manager::getInstance()->getWrites()));
+				FT_FD_CLR(iter->first, &(Manager::getInstance()->getErrors()));
+				delete resource_fdtype;
+				Manager::getInstance()->getFDTable().erase(iter->first);
+			}
+			else
+				iter++;
+		}
+		else if ((pipe_fdtype = dynamic_cast<PipeFD *>(iter->second)))
+		{
+			if (pipe_fdtype->to_client == client_pointer)
+			{
+				FT_FD_CLR(iter->first, &(Manager::getInstance()->getReads()));
+				FT_FD_CLR(iter->first, &(Manager::getInstance()->getWrites()));
+				FT_FD_CLR(iter->first, &(Manager::getInstance()->getErrors()));
+				delete pipe_fdtype;
+				Manager::getInstance()->getFDTable().erase(iter->first);
+			}
+			else
+				iter++;
+		}
+		else
+			iter++;
+	}
 
 	delete Manager::getInstance()->getFDTable()[client_socket_fd];
 	Manager::getInstance()->getFDTable()[client_socket_fd] = NULL;
@@ -115,6 +152,8 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	size_t pos;
 	std::string uri_loc = "";
 
+	std::cout << uri << std::endl;
+
 	pos = uri.find('.');
 	if (pos != std::string::npos)
 	{
@@ -140,9 +179,16 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 		uri_loc += "/";
 
 	std::map<std::string, Location> &loc_map = server.getLocations();
-	Location &ret = loc_map["/"];
+	Location *ret = &loc_map["/"];
 
 	std::string key = "";
+	std::cout << uri_loc << std::endl;
+	// std::cout << ret.getLocationName() << std::endl;
+	for (std::map<std::string, Location>::iterator iter = loc_map.begin(); iter != loc_map.end(); iter++)
+	{
+		std::cout << iter->second.getLocationName() << std::endl;
+		std::cout << iter->second.getRoot() << std::endl;
+	}
 	for (std::string::const_iterator iter = uri_loc.begin(); iter != uri_loc.end(); iter++)
 	{
 		key += *iter;
@@ -150,15 +196,15 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 		{
 			if (loc_map.find(key) == loc_map.end())
 			{
-				return (ret);
+				return (*ret);
 			}
 			else
 			{
-				ret = loc_map[key];
+				ret = &loc_map[key];
 			}
 		}
 	}
-	return (ret);
+	return (*ret);
 }
 
 bool	Webserver::run(struct timeval timeout)
@@ -220,6 +266,7 @@ bool	Webserver::run(struct timeval timeout)
 					{
 						Location &location = this->getPerfectLocation( *client->getServer(), client->getRequest().getUri() );
 
+						std::cout << "location:" << location.getLocationName() << std::endl;
 						std::cout << "check auth" << std::endl;
 						// auth 체크 - 401
 						if (location.getAuthKey() != ""
@@ -256,7 +303,7 @@ bool	Webserver::run(struct timeval timeout)
 							// 일반 response 처리 필요
 							// 일반 response는 어디까지 여기서 처리해줘야 할까?
 							std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
-							Location &location = this->getPerfectLocation(*client->getServer(), uri);
+							// Location &location = this->getPerfectLocation(*client->getServer(), uri);
 
 							std::cout << "check redirection" << std::endl;
 							//리다이렉션 체크
@@ -294,7 +341,11 @@ bool	Webserver::run(struct timeval timeout)
 									uri += '/';
 								
 								struct stat sb;
-								std::string path = location.getRoot() + uri.substr(location.getLocationName().length());
+								std::string path;
+								if (uri == "/")
+									path = location.getRoot();
+								else
+									path = location.getRoot() + uri.substr(location.getLocationName().length());
 
 								if (stat(path.c_str(), &sb) == -1)
 								{
@@ -365,10 +416,18 @@ bool	Webserver::run(struct timeval timeout)
 									is_no_slash = true;
 								}
 
-								std::string path = location.getRoot() + uri.substr(location.getLocationName().length());
+								std::string path;
+								if (uri == "/")
+									path = location.getRoot();
+								else
+									path = location.getRoot() + uri.substr(location.getLocationName().length());
 
 								if (is_no_slash == true)
+								{
 									path.erase(--(path.end()));
+								}
+
+								
 
 								if (path[path.length() - 1] == '/')
 								{
@@ -378,6 +437,7 @@ bool	Webserver::run(struct timeval timeout)
 									continue ;
 								}
 
+								client->getRequest().setPath(path);
 								int put_fd = client->getServer()->createFileWithDirectory(path);
 								std::cout << "resource fd :" << put_fd << std::endl;
 								ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, client);
@@ -398,7 +458,7 @@ bool	Webserver::run(struct timeval timeout)
 					// resource read
 					// pid 확인 후 exit이면 read 후 response 작성
 					// exit이 아니라면 continue;
-					// std::cout << "try to read resource" << std::endl;
+					std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
@@ -451,6 +511,7 @@ bool	Webserver::run(struct timeval timeout)
 					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
+					// std::cout << "try to response" << std::endl;
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
 						std::cout << "ready to response" << std::endl;
@@ -468,6 +529,7 @@ bool	Webserver::run(struct timeval timeout)
 								client->getResponse().getRawResponse().erase(0, write_size);
 								continue ;
 							}
+							// std::cout << client->getResponse().getRawResponse() << std::endl;
 							client->getResponse().getRawResponse().clear();
 							client->getRequest().initRequest();
 							client->getResponse().initResponse();
@@ -493,7 +555,7 @@ bool	Webserver::run(struct timeval timeout)
 					}
 					else
 					{
-						std::cout << "data: " << resource_fd->getData() << std::endl;
+						// std::cout << "data: " << resource_fd->getData() << std::endl;
 						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
 						if (static_cast<size_t>(write_size) < resource_fd->getData().length())
 						{
@@ -502,13 +564,13 @@ bool	Webserver::run(struct timeval timeout)
 						}
 
 						resource_fd->getData().clear();
+						resource_fd->to_client->getResponse().tryMakePutResponse(resource_fd->to_client->getRequest());
 						delete fd;
 						Manager::getInstance()->getFDTable()[i] = NULL;
 						Manager::getInstance()->getFDTable().erase(i);
 						FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
 						FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
 						close(i);
-						resource_fd->to_client->getResponse().tryMakePutResponse();
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -534,6 +596,7 @@ bool	Webserver::run(struct timeval timeout)
 						}
 						pipefd->getData().clear();
 
+						close(pipefd->fd_read);
 						close(i);
 						delete fd;
 						Manager::getInstance()->getFDTable()[i] = NULL;

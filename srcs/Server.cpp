@@ -4,7 +4,7 @@
 #include "Client.hpp"
 #include "CGI.hpp"
 
-Server::Server() : port(-1)
+Server::Server() : port(-1), socket_fd(-1)
 {
 	
 }
@@ -16,6 +16,7 @@ Server::Server(const Server& src)
 	this->server_name =	src.server_name;
 	this->socket_fd = src.socket_fd;
 	this->locations.insert(src.locations.begin(), src.locations.end());
+	this->clients.insert(src.clients.begin(), src.clients.end());
 }
 
 Server &Server::operator=(const Server &src)
@@ -26,6 +27,7 @@ Server &Server::operator=(const Server &src)
 	this->socket_fd		=	src.socket_fd;
 	this->locations.clear();
 	this->locations.insert(src.locations.begin(), src.locations.end());
+	this->clients.insert(src.clients.begin(), src.clients.end());
 
 	return (*this);
 }
@@ -131,6 +133,8 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
 		return (false);
+	
+	// std::cout << "cgi body: " << request.getRawBody() << std::endl;
 	CGI	cgi;
 	cgi.testCGICall(request, location, res);
 	return (true);

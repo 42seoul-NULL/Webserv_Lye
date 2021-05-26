@@ -65,6 +65,7 @@ class PipeFD : public FDType
 		PipeFD(int type, pid_t pid, Client *client);
 		pid_t pid;
 		Client *to_client;
+		int fd_read;
 
 		std::string &getData();
 		void setData(std::string &data);

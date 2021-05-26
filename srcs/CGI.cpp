@@ -2,11 +2,13 @@
 #include "Manager.hpp"
 #include "Request.hpp"
 #include "Location.hpp"
+#include "Client.hpp"
 
 CGI::CGI(void)
 {
+	this->pid = 0;
 	pipe(this->request_fd);
-	this->response_file_fd = open((".res_" + ft_itoa(this->request_fd[1])).c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
+	this->CGI_environment_list.clear();
 }
 
 CGI::~CGI(void)
@@ -18,6 +20,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 {
 	this->setCGIEnvironmentList(request);
 	char **env = this->setCGIEnvironment(request, location);
+	this->response_file_fd = open((".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), O_CREAT | O_TRUNC | O_RDWR, 0777);
 
 	this->pid = fork();
 	// write(this->request_fd[1], request.getRawBody().c_str(), request.getRawBody().length()); // block check
@@ -55,10 +58,12 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	}
 	else
 	{
-		close(this->request_fd[0]);
+		// close(this->request_fd[0]);
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
 		pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
+
+		pipe_fd->fd_read = request_fd[0];
 
 		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
 		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getWrites())); // pipe는 writes만 해주면 될 듯
@@ -72,6 +77,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		//reponse_file_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
 		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
+		std::cout << this->response_file_fd << std::endl;
 		FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getReads())); // reponse file은 reads 해주면 될 듯
 		FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getErrors()));
 		if (Manager::getInstance()->getWebserver().getFDMax() < this->response_file_fd)

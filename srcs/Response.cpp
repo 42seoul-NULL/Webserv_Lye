@@ -12,6 +12,8 @@
 Response::Response() : seek_flag(false)
 {
 	this->status = DEFAULT_STATUS;
+	this->client = NULL;
+	this->file_size = 0;
 }
 
 Response::~Response()
@@ -36,7 +38,7 @@ std::map<std::string, std::string>&	Response::getHeaders(void)
 
 std::string &Response::getRawResponse(void)
 {
-	return (this->raw);
+	return (this->raw_response);
 }
 
 std::string	&Response::getBody(void)
@@ -53,25 +55,53 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 {
 	char	buf[BUFFER_SIZE];
 	int		read_size;
-	std::string	cgi_raw;
 	
 	if (resource_fd->getType() == CGI_RESOURCE_FDTYPE)
 	{
 		int status;
 		if (waitpid(resource_fd->pid, &status, WNOHANG) == 0) // CGI Process 안끝남
 			return ;
-		if (seek_flag == false)
+		if (this->seek_flag == false)
 		{
 			lseek(fd, 0, SEEK_SET);
 			this->seek_flag = true;
+			struct stat sb;
+			std::cout << fd << std::endl;
+			if (stat(std::string(".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), &sb) == -1)
+			{
+				std::cerr << "stat err!" << std::endl;
+			}
+			this->file_size = sb.st_size;
 		}
 		read_size = read(fd, buf, BUFFER_SIZE - 1);
-		if (read_size > 0) // stat file size check 해서 작성하자....
+		if (read_size == -1)
+		{
+			this->makeErrorResponse(500, NULL);
+			return ;
+		}
+
+		if (this->file_size == read_size)
 		{
 			buf[read_size] = '\0';
-			cgi_raw += std::string(buf);
+			this->cgi_raw += std::string(buf);
+			this->file_size = 0;
 		}
+		else
+		{
+			this->file_size -= read_size;
+			if (this->file_size > 0) // stat file size check 해서 작성하자....
+			{
+				buf[read_size] = '\0';
+				this->cgi_raw += std::string(buf);
+				// std::cout << this->file_size << std::endl;
+				return ;
+			}
+		}
+
+		// std::size_t file_size = sb.st_size;
+
 		delete resource_fd;
+		std::cout << "read size: " << read_size << std::endl;
 		Manager::getInstance()->getFDTable()[fd] = NULL;
 		Manager::getInstance()->getFDTable().erase(fd);
 		FT_FD_CLR(fd, &(Manager::getInstance()->getReads()));
@@ -82,7 +112,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
-		this->applyCGIResponse(cgi_raw); // status 저장, content_type 저장, body 저장
+		this->applyCGIResponse(this->cgi_raw); // status 저장, content_type 저장, body 저장
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
 		this->makeRawResponse();
@@ -90,11 +120,12 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	}
 	else
 	{
-		this->body.clear();
-		while ((read_size = read(fd, buf, BUFFER_SIZE - 1)) > 0)
+		read_size = read(fd, buf, BUFFER_SIZE - 1);
+		if (read_size > 0)
 		{
 			buf[read_size] = '\0';
 			this->body += std::string(buf);
+			return ;
 		}
 		delete resource_fd;
 		Manager::getInstance()->getFDTable()[fd] = NULL;
@@ -107,7 +138,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
-		std::cout << this->body.length() << std::endl;
+		// std::cout << this->body.length() << std::endl;
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
@@ -116,9 +147,16 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	}
 }
 
-void		Response::tryMakePutResponse()
+void		Response::tryMakePutResponse(Request &request)
 {
-	
+	this->status = 200;
+	this->generateDate();
+	this->generateLastModified(request);
+	this->generateServer();
+	this->generateContentLength();
+	this->makeStartLine();
+	this->makeRawResponse();
+	this->client->setStatus(RESPONSE_COMPLETE);
 }
 
 void	Response::applyCGIResponse(std::string& cgi_raw)
@@ -127,22 +165,30 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
-	for (std::vector<std::string>::const_iterator iter = status_line.begin(); iter != status_line.end(); iter++)
-	{
-		std::cout << *iter << std::endl;
-	}
+	// for (std::vector<std::string>::const_iterator iter = status_line.begin(); iter != status_line.end(); iter++)
+	// {
+	// 	std::cout << *iter << std::endl;
+	// }
+	// std::cout << "cgi_raw:" << cgi_raw << std::endl;
 	this->status = ft_atoi(status_line[1]);
 
 	// Header
 	std::vector<std::string> header_line;
 	std::size_t header_sep = cgi_raw.find("\r\n\r\n");
-	ft_split(cgi_raw.substr(status_sep + 2, header_sep - status_sep), " ", header_line);
+	ft_split(cgi_raw.substr(status_sep + 2, header_sep - status_sep - 2), " ", header_line);
 	if (*(--header_line[1].end()) == ';')
 		header_line[1].erase(--header_line[1].end());
 	this->headers.insert(std::pair<std::string, std::string>("Content-Type", header_line[1]));
 
 	// Body
-	this->body = cgi_raw.substr(header_sep + 2);
+	if (cgi_raw.length() > header_sep + 4)
+	{
+		this->body = cgi_raw.substr(header_sep + 4);
+	}
+	else
+	{
+		this->body = "";
+	}
 }
 
 
@@ -229,6 +275,7 @@ void	Response::generateContentLocation(Request &request)
 void	Response::generateContentLength(void)
 {
 	this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
+	std::cout << "Content Length: " << this->body.length() << std::endl;
 }
 
 void	Response::generateContentType(Request &request)
@@ -299,29 +346,31 @@ void	Response::makeStartLine()
 
 void	Response::makeRawResponse(void)
 {
-	this->raw += this->start_line;
-	this->raw += "\r\n";
+	this->raw_response += this->start_line;
+	this->raw_response += "\r\n";
 
 	for (std::map<std::string, std::string>::const_iterator iter = this->headers.begin(); iter != this->headers.end(); iter++)
 	{
-		this->raw += iter->first;
-		this->raw += ": ";
-		this->raw += iter->second;
-		this->raw += "\r\n";
+		this->raw_response += iter->first;
+		this->raw_response += ": ";
+		this->raw_response += iter->second;
+		this->raw_response += "\r\n";
 	}
-	this->raw += "\r\n";
+	this->raw_response += "\r\n";
 
-	this->raw += this->body;
+	this->raw_response += this->body;
 }
 
 void	Response::initResponse(void)
 {
 	this->start_line.clear();
-	this->body.clear();
-	this->raw.clear();
 	this->headers.clear();
+	this->body.clear();
+	this->raw_response.clear();
 	this->status = DEFAULT_STATUS;
 	this->seek_flag = false;
+	this->cgi_raw.clear();
+	this->file_size = 0;
 }
 
 void	Response::makeErrorResponse(int status, Location *location)

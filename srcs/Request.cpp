@@ -3,13 +3,27 @@
 
 Request::Request(void)
 {
-	this->raw_request.clear();
 	initRequest();
 }
 
-Request::Request(const Request& src) : raw_request(src.raw_request), method(src.method), uri(src.uri), http_version(src.http_version), raw_header(src.raw_header), raw_body(src.raw_body), temp_body(src.temp_body), status(src.status), type(src.type)
+Request::Request(const Request& src)
 {
+	this->raw_request.clear();
+	initRequest();
+
+	this->raw_request = src.raw_request;
+	this->method = src.method;
+	this->uri = src.uri;
+	this->http_version = src.http_version;
 	this->headers.insert(src.headers.begin(), src.headers.end());
+
+	this->raw_header = src.raw_header;
+	this->raw_body = src.raw_body;
+	this->temp_body = src.temp_body;
+	this->status = src.status;
+	this->type = src.type;
+	this->path = src.path;
+	this->client = src.client;
 }
 
 Request&	Request::operator=(const Request& src)
@@ -26,8 +40,10 @@ Request&	Request::operator=(const Request& src)
 	this->raw_header = src.raw_header;
 	this->raw_body = src.raw_body;
 	this->temp_body = src.temp_body;
-	this->status = 0;
-	this->type = 0;
+	this->status = src.status;
+	this->type = src.type;
+	this->path = src.path;
+	this->client = src.client;
 
 	return (*this);
 }
@@ -106,7 +122,7 @@ void	Request::setPath(std::string &path)
 
 void	Request::initRequest(void)
 {
-	this->raw_request.clear();
+	// this->raw_request.clear();
 	this->method.clear();
 	this->uri.clear();
 	this->http_version.clear();
@@ -123,8 +139,6 @@ bool	Request::tryMakeRequest(void)
 {
 	std::size_t	found = this->raw_request.find("\r\n\r\n");
 
-	// std::cout << "first header\n" << raw_request << "hyeonski tkfkdgo\n" << std::endl;
-
 	if (found != std::string::npos && this->status == PARSING_HEADER)
 	{
 		this->makeStartLine();
@@ -134,7 +148,6 @@ bool	Request::tryMakeRequest(void)
 		// exit(0);
 		if (res == NOBODY)
 		{
-			// this->raw_request = this->temp_body;
 			this->temp_body.clear();
 			return (true);
 		}
@@ -142,6 +155,7 @@ bool	Request::tryMakeRequest(void)
 	if (this->status == PARSING_BODY)
 	{
 		this->temp_body += raw_request;
+		raw_request.clear();
 		return (isComplete());
 	}
 	return (false);
@@ -208,7 +222,11 @@ void	Request::makeRequestHeader(void)
 	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
 		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 
-	this->raw_request = this->raw_request.substr(this->raw_request.find("\r\n\r\n") + 4);
+	size_t pos = this->raw_request.find("\r\n\r\n");
+	if (this->raw_request.length() > pos + 4)
+		this->raw_request = this->raw_request.substr(pos + 4);
+	else
+		this->raw_request.clear();
 }
 
 bool	Request::bodyCheck(void)
@@ -230,7 +248,8 @@ bool	Request::isComplete(void)
 	if (this->type == CONTENT_LENGTH && this->temp_body.length() >= len)
 	{
 		this->raw_body += this->temp_body.substr(0, len);
-		this->raw_request += this->temp_body.substr(len);
+		if (this->temp_body.length() > len)
+			this->raw_request += this->temp_body.substr(len);
 		temp_body.clear();
 		this->status = PARSING_HEADER;
 		return (true);
@@ -260,7 +279,6 @@ bool	Request::isComplete(void)
 				this->temp_body.clear();
 				if (cut.length() > chunk_size + 2) // 뒤 청크 같이 들어온 경우 temp_body에 다음 애들 넣어주기
 					this->temp_body = cut.substr(chunk_size + 2);
-				raw_request.clear();
 			}
 			else 
 				break ;
