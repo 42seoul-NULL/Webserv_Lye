@@ -256,70 +256,61 @@ bool	Webserver::run(struct timeval timeout)
 							// 일반 response 처리 필요
 							// 일반 response는 어디까지 여기서 처리해줘야 할까?
 							std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
-							// Location &location = this->getPerfectLocation(*client->getServer(), uri);
+							Location &location = this->getPerfectLocation(*client->getServer(), uri);
+
+							std::cout << "check redirection" << std::endl;
+							//리다이렉션 체크
+							if (location.getRedirectReturn() != -1)
+							{
+								client->getResponse().makeRedirectResponse(location);
+								continue ;
+							}
+
+
+							// if (uri[uri.length() - 1] != '/')
+							// 	uri += '/';
+							
+							// struct stat sb;
+							// std::string path = location.getRoot() + uri.substr(location.getLocationName().length());
+
+							// if (stat(path.c_str(), &sb) == -1)
+							// {
+							// 	path.erase(--(path.end())); // '/' 떼보고 stat 해봐서
+							// 	if (stat(path.c_str(), &sb) == -1) // 없으면 404
+							// 	{
+							// 		client->getResponse().makeErrorResponse(404, &location);
+							// 		continue ;		
+							// 	}
+							// } // if 안들어가면 디렉토리
 
 							
+
 							if (client->getRequest().getMethod() == "GET" || client->getRequest().getMethod() == "HEAD")
 							{
 								std::cout << "get or head" << std::endl;
 
-								std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
-								Location &location = this->getPerfectLocation(*client->getServer(), uri);
-								std::string path;
+
+								if (uri[uri.length() - 1] != '/')
+									uri += '/';
 								
-								std::cout << "check redirection" << std::endl;
-								//리다이렉션 체크
-								if (location.getRedirectReturn() != -1)
+								struct stat sb;
+								std::string path = location.getRoot() + uri.substr(location.getLocationName().length());
+
+								if (stat(path.c_str(), &sb) == -1)
 								{
-									client->getResponse().makeRedirectResponse(location);
-									continue ;
-								}
+									path.erase(--(path.end())); // '/' 떼보고 stat 해봐서
+									if (stat(path.c_str(), &sb) == -1) // 없으면 404
+									{
+										client->getResponse().makeErrorResponse(404, &location);
+										continue ;		
+									}
+								} // if 안들어가면 디렉토리
 
 								std::cout << "check autoindex" << std::endl;
-								std::string uri_autocheck = uri;
-								if (uri_autocheck[uri_autocheck.length() - 1] != '/')
+								
+								if (path[path.length() - 1] == '/') // 디렉토리
 								{
-									std::cout << "check autoindex - no slash" << std::endl;
-									uri_autocheck += '/';
-									if (uri_autocheck == location.getLocationName()) // location uri일 경우
-									{
-										std::cout << "check autoindex - no slash but location name" << std::endl;
-										path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
-										std::string res = location.checkAutoIndex(uri_autocheck); // true / false => return => 처리
-										if (res == "404")
-										{
-											client->getResponse().makeErrorResponse(404, &location);
-											continue ;
-										}
-										else if (res == "Index of") //autoindex list up
-										{
-											client->getResponse().makeAutoIndexResponse(path);
-											continue ;
-										}
-										else
-											path = res;
-									}
-									else // 로케이션 하위 파일 - 무조건 파일
-									{
-										std::cout << "check autoindex - file name" << std::endl;
-										// std::size_t pos = uri_autocheck.find(location.getLocationName());
-										path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
-										path.erase(--(path.end())); //끝에 '/' 날려
-										
-										struct stat sb;
-										if (stat(path.c_str(), &sb) == -1)
-										{
-											client->getResponse().makeErrorResponse(404, &location);
-											continue ;
-										}
-									}
-								}
-								else // 무조건 디렉토리 uri
-								{
-									std::cout << "check autoindex - directory uri" << std::endl;
-									path = location.getRoot() + uri_autocheck.substr(location.getLocationName().length());
-									std::string res = location.checkAutoIndex(uri_autocheck);
-									// res 따라서 404 / index Of / index file
+									std::string res = location.checkAutoIndex(path);
 									if (res == "404")
 									{
 										client->getResponse().makeErrorResponse(404, &location);
@@ -328,13 +319,11 @@ bool	Webserver::run(struct timeval timeout)
 									else if (res == "Index of") //autoindex list up
 									{
 										client->getResponse().makeAutoIndexResponse(path);
-										client->setStatus(RESPONSE_COMPLETE);
 										continue ;
 									}
 									else
 										path = res;
-								}
-							
+								} // 파일은 무조건 존재함
 
 								client->getRequest().setPath(path);
 								
@@ -353,25 +342,37 @@ bool	Webserver::run(struct timeval timeout)
 							}
 							else if (client->getRequest().getMethod() == "PUT" || client->getRequest().getMethod() == "POST")
 							{
-								std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
-								Location &location = this->getPerfectLocation(*client->getServer(), uri);
+								// std::string uri = client->getRequest().getUri().substr(0, client->getRequest().getUri().find('?'));
+								// Location &location = this->getPerfectLocation(*client->getServer(), uri);
 
-								if (location.getRedirectReturn() != -1) 
+								// if (location.getRedirectReturn() != -1) 
+								// {
+								// 	client->getResponse().makeRedirectResponse(location);
+								// 	continue ;
+								// }
+								// std::string filename = location.getLocationName();
+								// if (uri.find(filename) == std::string::npos)
+								// {
+								// 	client->getResponse().makeErrorResponse(404, &location); // asdf
+								// 	continue ;
+								// }
+								// filename.erase(0, filename.length());
+								
+								bool is_no_slash = false;
+								if (uri[uri.length() - 1] != '/')
 								{
-									client->getResponse().makeRedirectResponse(location);
-									continue ;
+									uri += '/';
+									is_no_slash = true;
 								}
-								std::string filename = location.getLocationName();
-								if (uri.find(filename) == std::string::npos)
-								{
-									client->getResponse().makeErrorResponse(404, &location); // asdf
-									continue ;
-								}
-								filename.erase(0, filename.length());
 
-								std::string path = location.getRoot() + filename;
+								std::string path = location.getRoot() + uri.substr(location.getLocationName().length());
+
+								if (is_no_slash == true)
+									path.erase(--(path.end()));
+
 								if (path[path.length() - 1] == '/')
 								{
+									std::cout << "put to directory" << std::endl;
 									std::cout << path << std::endl;
 									client->getResponse().makeErrorResponse(400, &location);
 									continue ;
@@ -397,7 +398,7 @@ bool	Webserver::run(struct timeval timeout)
 					// resource read
 					// pid 확인 후 exit이면 read 후 response 작성
 					// exit이 아니라면 continue;
-					std::cout << "try to read resource" << std::endl;
+					// std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
@@ -492,6 +493,7 @@ bool	Webserver::run(struct timeval timeout)
 					}
 					else
 					{
+						std::cout << "data: " << resource_fd->getData() << std::endl;
 						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
 						if (static_cast<size_t>(write_size) < resource_fd->getData().length())
 						{
@@ -505,6 +507,8 @@ bool	Webserver::run(struct timeval timeout)
 						Manager::getInstance()->getFDTable().erase(i);
 						FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
 						FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
+						close(i);
+						resource_fd->to_client->getResponse().tryMakePutResponse();
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -529,12 +533,14 @@ bool	Webserver::run(struct timeval timeout)
 							continue ;
 						}
 						pipefd->getData().clear();
+
+						close(i);
 						delete fd;
 						Manager::getInstance()->getFDTable()[i] = NULL;
 						Manager::getInstance()->getFDTable().erase(i);
 						FT_FD_CLR(i, &(Manager::getInstance()->getWrites()));
 						FT_FD_CLR(i, &(Manager::getInstance()->getErrors()));
-						close(i);
+
 					}
 				}
 			}

@@ -37,6 +37,7 @@ class Response
 		void setClient(Client *client);
 
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
+		void	tryMakePutResponse();
 		void	applyCGIResponse(std::string& raw);
 		void	makeResponseHeader(Request &request);
 		void	makeCGIResponseHeader(Request& request);

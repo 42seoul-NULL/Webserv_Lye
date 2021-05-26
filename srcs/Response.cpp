@@ -107,12 +107,18 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
+		std::cout << this->body.length() << std::endl;
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
 		this->makeRawResponse();
 		request.getClient()->setStatus(RESPONSE_COMPLETE);
 	}
+}
+
+void		Response::tryMakePutResponse()
+{
+	
 }
 
 void	Response::applyCGIResponse(std::string& cgi_raw)
@@ -268,6 +274,7 @@ void	Response::generateWWWAuthenticate()
 
 void	Response::makeRedirectResponse(Location &location)
 {
+	this->status = location.getRedirectReturn();
 	this->generateDate();
 	this->generateLocation(location);
 	this->generateRetryAfter();

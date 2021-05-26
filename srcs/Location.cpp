@@ -184,6 +184,7 @@ std::string	Location::checkAutoIndex(std::string &uri)
 	{
 		temp = uri;
 		temp += *iter;
+		std::cout << temp << std::endl;
 		if (stat(temp.c_str(), &sb) == 0)
 		{
 			found = true;

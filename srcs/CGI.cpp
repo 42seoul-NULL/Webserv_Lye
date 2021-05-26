@@ -25,6 +25,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	{
 		// write(fd1[1], request.getRawBody().c_str(), request.getRawBody().length()); // read/write block check
 		// Manager::getInstance()->getFDTable()[this->request_fd] = new ResourceFD(PIPE_FDTYPE);
+		close(this->request_fd[1]);
 		dup2(this->request_fd[0], 0);
 		dup2(this->response_file_fd, 1);
 		if (file_name.substr(file_name.find('.')) == ".php")
@@ -54,9 +55,11 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	}
 	else
 	{
+		close(this->request_fd[0]);
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
 		pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
+
 		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
 		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getWrites())); // pipe는 writes만 해주면 될 듯
 		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getErrors()));
@@ -125,8 +128,14 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location)
 		cgi_env.insert(std::pair<std::string, std::string>("AUTH_TYPE", request.getHeaders()["Authorization"].substr(0, found)));
 		// cgi_env.insert(std::pair<std::string, std::string>("REMOTE_USER", )) // auth 의 id
 	}
+	std::cout << request.getHeaders()["Content-Length"] << std::endl;
 	if (request.getHeaders()["Content-Length"] != "")
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", request.getHeaders()["Content-Length"]));
+	else if (request.getHeaders()["Transfer-Encoding"] == "chunked")
+		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", ft_itoa(request.getRawBody().length())));
+	else
+		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", "0"));	
+
 	if (request.getHeaders()["Content-Type"] != "")
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", request.getHeaders()["Content-Length"]));
 	cgi_env.insert(std::pair<std::string, std::string>("GATEWAY_INTERFACE", "Cgi/1.1"));

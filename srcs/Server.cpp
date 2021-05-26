@@ -151,7 +151,7 @@ int    Server::createFileWithDirectory(std::string path)
         n = pos + 1;
         pos = path.find("/", n);
     }
-    fd = open(path.c_str(), O_CREAT | O_TRUNC | O_EXCL, 0777);
+    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
 	return (fd);
 }
 
