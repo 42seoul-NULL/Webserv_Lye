@@ -1,4 +1,4 @@
-#include "../includes/Location.hpp"
+#include "Location.hpp"
 #include <sys/stat.h>
 
 Location::Location() : request_max_body_size(-1), auto_index(false), redirect_return(-1)
@@ -16,7 +16,7 @@ Location::Location(const Location &src)
 	this->request_max_body_size = src.request_max_body_size;
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extensions.assign(src.cgi_extensions.begin(), src.cgi_extensions.end());
+	this->cgi_extensions = src.cgi_extensions;
 	this->auth_key = src.auth_key;
 	this->redirect_return = src.redirect_return;
 	this->redirect_addr = src.redirect_addr;
@@ -32,7 +32,8 @@ Location &Location::operator=(const Location &src)
 	this->request_max_body_size = src.request_max_body_size;
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extensions.assign(src.cgi_extensions.begin(), src.cgi_extensions.end());
+	this->cgi_extensions.clear();
+	this->cgi_extensions = src.cgi_extensions;
 	this->auth_key = src.auth_key;
 	this->redirect_return = src.redirect_return;
 	this->redirect_addr = src.redirect_addr;
