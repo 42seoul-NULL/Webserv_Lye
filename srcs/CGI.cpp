@@ -27,7 +27,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	if (this->pid == 0)
 	{
 		// write(fd1[1], request.getRawBody().c_str(), request.getRawBody().length()); // read/write block check
-		// Manager::getInstance()->getFDTable()[this->request_fd] = new ResourceFD(PIPE_FDTYPE);
+		// MANAGER->getFDTable()[this->request_fd] = new ResourceFD(PIPE_FDTYPE);
 		close(this->request_fd[1]);
 		dup2(this->request_fd[0], 0);
 		dup2(this->response_file_fd, 1);
@@ -65,24 +65,24 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 
 		pipe_fd->fd_read = request_fd[0];
 
-		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
-		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getWrites())); // pipe는 writes만 해주면 될 듯
-		FT_FD_SET(this->request_fd[1], &(Manager::getInstance()->getErrors()));
+		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
+		FT_FD_SET(this->request_fd[1], &(MANAGER->getWrites())); // pipe는 writes만 해주면 될 듯
+		FT_FD_SET(this->request_fd[1], &(MANAGER->getErrors()));
 
-		if (Manager::getInstance()->getWebserver().getFDMax() < this->request_fd[1])
+		if (MANAGER->getWebserver().getFDMax() < this->request_fd[1])
 		{
-			Manager::getInstance()->getWebserver().setFDMax(this->request_fd[1]);
+			MANAGER->getWebserver().setFDMax(this->request_fd[1]);
 		}
 		
 		//reponse_file_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
-		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
-		std::cout << this->response_file_fd << std::endl;
-		FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getReads())); // reponse file은 reads 해주면 될 듯
-		FT_FD_SET(this->response_file_fd, &(Manager::getInstance()->getErrors()));
-		if (Manager::getInstance()->getWebserver().getFDMax() < this->response_file_fd)
+		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
+		std::cout << "cgi_response_file_fd:[" << this->response_file_fd << "]" << std::endl;
+		FT_FD_SET(this->response_file_fd, &(MANAGER->getReads())); // reponse file은 reads 해주면 될 듯
+		FT_FD_SET(this->response_file_fd, &(MANAGER->getErrors()));
+		if (MANAGER->getWebserver().getFDMax() < this->response_file_fd)
 		{
-			Manager::getInstance()->getWebserver().setFDMax(this->response_file_fd);
+			MANAGER->getWebserver().setFDMax(this->response_file_fd);
 		}
 		return ;
 	}
@@ -134,7 +134,7 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location)
 		cgi_env.insert(std::pair<std::string, std::string>("AUTH_TYPE", request.getHeaders()["Authorization"].substr(0, found)));
 		// cgi_env.insert(std::pair<std::string, std::string>("REMOTE_USER", )) // auth 의 id
 	}
-	std::cout << request.getHeaders()["Content-Length"] << std::endl;
+	std::cout << "cgi_env_content_length:[" << request.getHeaders()["Content-Length"] << "]" << std::endl;
 	if (request.getHeaders()["Content-Length"] != "")
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", request.getHeaders()["Content-Length"]));
 	else if (request.getHeaders()["Transfer-Encoding"] == "chunked")
@@ -181,7 +181,7 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location)
 		std::size_t pos = request.getUri().rfind(path_info);
 		cgi_env.insert(std::pair<std::string, std::string>("SCRIPT_NAME", location.getRoot() + request.getUri().substr(1, pos - 1)));
 	}
-	std::cout << cgi_env.find("SCRIPT_NAME")->second << std::endl;
+	std::cout << "cgi_env_script_name:[" << cgi_env.find("SCRIPT_NAME")->second << "]" << std::endl;
 	///////// SCRIPT_NAME
 	
 	cgi_env.insert(std::pair<std::string, std::string>("SERVER_NAME", "127.0.0.1"));

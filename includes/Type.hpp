@@ -10,4 +10,6 @@ typedef enum			e_status
 	RESPONSE_COMPLETE,
 }						t_status;
 
+# define MANAGER Manager::getInstance()
+
 #endif

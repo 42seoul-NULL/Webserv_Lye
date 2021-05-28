@@ -40,6 +40,8 @@ class Webserver
 		Location &getPerfectLocation(Server &server, const std::string &uri);
 		bool	initServers(int queue_size);
 		bool	run(struct timeval timeout);
+		int prepareResponse(Client &client);
+		int prepareGeneralResponse(Client &client, Location &location);
 };
 
 #endif

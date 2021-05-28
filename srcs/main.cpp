@@ -1,13 +1,14 @@
 #include "../libft_cpp/libft.hpp"
 #include "Manager.hpp"
+#include "Type.hpp"
 
 int	main(int ac, char **av)
 {
 	ac = 0;
 
-	if(!Manager::getInstance()->parseConfig(av[1]))
+	if(!MANAGER->parseConfig(av[1]))
 		return (1);
-	Manager::getInstance()->show();
+	MANAGER->show();
 
 	struct timeval timeout;
 
@@ -16,8 +17,8 @@ int	main(int ac, char **av)
 
 	try
 	{
-		Manager::getInstance()->getWebserver().initServers(5);
-		Manager::getInstance()->getWebserver().run(timeout);
+		MANAGER->getWebserver().initServers(5);
+		MANAGER->getWebserver().run(timeout);
 	}
 	catch(const char *e)
 	{

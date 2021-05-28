@@ -335,24 +335,24 @@ std::map<int, FDType *> &Manager::getFDTable()
 	return (this->fd_table);
 }
 
-ServerFD::ServerFD(int type)
+ServerFD::ServerFD(t_FDType type)
 {
 	this->type = type;
 }
 
-ClientFD::ClientFD(int type, Client *client)
-{
-	this->type = type;
-	this->to_client = client;
-}
-
-ResourceFD::ResourceFD(int type, Client *client)
+ClientFD::ClientFD(t_FDType type, Client *client)
 {
 	this->type = type;
 	this->to_client = client;
 }
 
-ResourceFD::ResourceFD(int type, pid_t pid, Client *client)
+ResourceFD::ResourceFD(t_FDType type, Client *client)
+{
+	this->type = type;
+	this->to_client = client;
+}
+
+ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
 {
 	this->type = type;
 	this->pid = pid;
@@ -369,7 +369,7 @@ void ResourceFD::setData(std::string &data)
 	this->data = data;
 }
 
-PipeFD::PipeFD(int type, pid_t pid, Client *client)
+PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client)
 {
 	this->type = type;
 	this->pid = pid;

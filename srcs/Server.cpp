@@ -111,7 +111,7 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	this->clients[client_socket].setServer(*this);
 	//fd_table 세팅
 	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
-	Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
+	MANAGER->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 
 	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
@@ -164,7 +164,7 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 	char auth_key[200];
 
 	std::size_t found = client.getRequest().getHeaders()["Authorization"].find(' ');
-	Manager::getInstance()->decode_base64(client.getRequest().getHeaders()["Authorization"].substr(found + 1).c_str(), auth_key, client.getRequest().getHeaders()["Authorization"].length());
+	MANAGER->decode_base64(client.getRequest().getHeaders()["Authorization"].substr(found + 1).c_str(), auth_key, client.getRequest().getHeaders()["Authorization"].length());
 
 	if (std::string(auth_key) != location.getAuthKey())
 		return (false);

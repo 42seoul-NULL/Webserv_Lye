@@ -22,7 +22,7 @@ typedef enum	e_FDType
 class FDType
 {
 	protected:
-		int type;
+		t_FDType type;
 	public :
 		virtual ~FDType() {}
 		int getType();
@@ -31,14 +31,14 @@ class FDType
 class ServerFD : public FDType
 {
 	public :
-		ServerFD(int type);
+		ServerFD(t_FDType type);
 		~ServerFD() {}
 };
 
 class ClientFD : public FDType
 {
 	public :
-		ClientFD(int type, Client *client);
+		ClientFD(t_FDType type, Client *client);
 		Client *to_client;
 		~ClientFD() {}
 };
@@ -48,8 +48,8 @@ class ResourceFD : public FDType
 	private:
 		std::string data;
 	public :
-		ResourceFD(int type, pid_t pid, Client *client);
-		ResourceFD(int type, Client *client);
+		ResourceFD(t_FDType type, pid_t pid, Client *client);
+		ResourceFD(t_FDType type, Client *client);
 		pid_t pid;
 		Client *to_client;
 		std::string &getData();
@@ -62,7 +62,7 @@ class PipeFD : public FDType
 	private:
 		std::string data;
 	public:
-		PipeFD(int type, pid_t pid, Client *client);
+		PipeFD(t_FDType type, pid_t pid, Client *client);
 		pid_t pid;
 		Client *to_client;
 		int fd_read;

@@ -104,10 +104,8 @@ int Client::readRequest(void)
 	if (this->request.tryMakeRequest() == true)
 	{
 		this->status = REQUEST_COMPLETE;
-		std::cout << "method:" << this->request.getMethod() << std::endl;
-		std::cout << "uri:" << this->request.getUri() << std::endl;
-
-		// this->request.initRequest(); // init은 Response에서 하는걸로 합시당!
+		std::cout << "method:[" << this->request.getMethod() << "]" << std::endl;
+		std::cout << "uri:[" << this->request.getUri() << "]" << std::endl;
 	}
 	// std::cout << "Raw Body: |" << this->request.getRawBody() << "|" << std::endl;
 	// std::cout << "Client status: |" << this->status << "|" << std::endl;

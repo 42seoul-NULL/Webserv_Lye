@@ -66,7 +66,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			lseek(fd, 0, SEEK_SET);
 			this->seek_flag = true;
 			struct stat sb;
-			std::cout << fd << std::endl;
+			std::cout << "cgi_response_resource_fd:[" << fd << "]" << std::endl;
 			if (stat(std::string(".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), &sb) == -1)
 			{
 				std::cerr << "stat err!" << std::endl;
@@ -101,11 +101,11 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		// std::size_t file_size = sb.st_size;
 
 		delete resource_fd;
-		std::cout << "read size: " << read_size << std::endl;
-		Manager::getInstance()->getFDTable()[fd] = NULL;
-		Manager::getInstance()->getFDTable().erase(fd);
-		FT_FD_CLR(fd, &(Manager::getInstance()->getReads()));
-		FT_FD_CLR(fd, &(Manager::getInstance()->getErrors()));
+		// std::cout << "read size: " << read_size << std::endl;
+		MANAGER->getFDTable()[fd] = NULL;
+		MANAGER->getFDTable().erase(fd);
+		FT_FD_CLR(fd, &(MANAGER->getReads()));
+		FT_FD_CLR(fd, &(MANAGER->getErrors()));
 		close(fd);
 		if (read_size == -1)
 		{
@@ -128,10 +128,10 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			return ;
 		}
 		delete resource_fd;
-		Manager::getInstance()->getFDTable()[fd] = NULL;
-		Manager::getInstance()->getFDTable().erase(fd);
-		FT_FD_CLR(fd, &(Manager::getInstance()->getReads()));
-		FT_FD_CLR(fd, &(Manager::getInstance()->getErrors()));
+		MANAGER->getFDTable()[fd] = NULL;
+		MANAGER->getFDTable().erase(fd);
+		FT_FD_CLR(fd, &(MANAGER->getReads()));
+		FT_FD_CLR(fd, &(MANAGER->getErrors()));
 		close(fd);
 		if (read_size == -1)
 		{
@@ -217,7 +217,7 @@ void		Response::makeCGIResponseHeader(Request& request)
 void	Response::generateAllow(Request& request)
 {
 	std::string allow;
-	Location &test = Manager::getInstance()->getWebserver().getPerfectLocation(*request.getClient()->getServer(), request.getUri());
+	Location &test = MANAGER->getWebserver().getPerfectLocation(*request.getClient()->getServer(), request.getUri());
 	for (std::list<std::string>::const_iterator iter = test.getAllowMethods().begin(); iter != test.getAllowMethods().end(); iter++)
 	{
 		allow += *iter;
@@ -274,7 +274,7 @@ void	Response::generateContentLocation(Request &request)
 void	Response::generateContentLength(void)
 {
 	this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
-	std::cout << "Content Length: " << this->body.length() << std::endl;
+	std::cout << "Content Length:[" << this->body.length() << "]" << std::endl;
 }
 
 void	Response::generateContentType(Request &request)
@@ -286,11 +286,11 @@ void	Response::generateContentType(Request &request)
 	else
 	{
 		ext = ext.substr(pos);
-		if (Manager::getInstance()->getMimeType().count(ext) == 0)
+		if (MANAGER->getMimeType().count(ext) == 0)
 			this->headers.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));		
 		else			
 		{
-			std::string type = Manager::getInstance()->getMimeType()[ext];
+			std::string type = MANAGER->getMimeType()[ext];
 			this->headers.insert(std::pair<std::string, std::string>("Content-Type", type));		
 		}
 	}
@@ -332,8 +332,8 @@ void	Response::makeRedirectResponse(Location &location)
 void	Response::makeStartLine()
 {
 
-	std::map<std::string, std::string>::const_iterator iter = Manager::getInstance()->getStatusCode().find(ft_itoa(this->status));
-	if (iter == Manager::getInstance()->getStatusCode().end())
+	std::map<std::string, std::string>::const_iterator iter = MANAGER->getStatusCode().find(ft_itoa(this->status));
+	if (iter == MANAGER->getStatusCode().end())
 		;
 	this->start_line += "HTTP/1.1 ";
 	this->start_line += ft_itoa(this->status);
@@ -400,12 +400,12 @@ void	Response::makeErrorResponse(int status, Location *location)
 			return ;
 		}
 		ResourceFD *error_resource = new ResourceFD(ERROR_RESOURCE_FDTYPE, this->client);
-		Manager::getInstance()->getFDTable().insert(std::pair<int, FDType*>(fd, error_resource));
-		FT_FD_SET(fd, &(Manager::getInstance()->getReads()));
-		FT_FD_SET(fd, &(Manager::getInstance()->getErrors()));
-		if (Manager::getInstance()->getWebserver().getFDMax() < fd)
+		MANAGER->getFDTable().insert(std::pair<int, FDType*>(fd, error_resource));
+		FT_FD_SET(fd, &(MANAGER->getReads()));
+		FT_FD_SET(fd, &(MANAGER->getErrors()));
+		if (MANAGER->getWebserver().getFDMax() < fd)
 		{
-			Manager::getInstance()->getWebserver().setFDMax(fd);
+			MANAGER->getWebserver().setFDMax(fd);
 		}
 	}
 }
@@ -481,11 +481,11 @@ void		Response::generateErrorPage(int status)
 	this->body.clear();
 	this->body += "<html>\r\n";
 	this->body += "<head>\r\n";
-	this->body += "<title>" + ft_itoa(this->status) + " " + Manager::getInstance()->getStatusCode().find(ft_itoa(this->status))->second + "</title>\r\n";
+	this->body += "<title>" + ft_itoa(this->status) + " " + MANAGER->getStatusCode().find(ft_itoa(this->status))->second + "</title>\r\n";
 	this->body += "</head>\r\n";
 	this->body += "<body bgcolor=\"white\">\r\n";
 	this->body += "<center>\r\n";
-	this->body += "<h1>" + ft_itoa(this->status) + " " + Manager::getInstance()->getStatusCode().find(ft_itoa(this->status))->second + "</h1>\r\n";
+	this->body += "<h1>" + ft_itoa(this->status) + " " + MANAGER->getStatusCode().find(ft_itoa(this->status))->second + "</h1>\r\n";
 	this->body += "</center>\r\n";
 	this->body += "<hr>\r\n";
 	this->body += "<center>HyeonSkkiDashi/1.0</center>\r\n";

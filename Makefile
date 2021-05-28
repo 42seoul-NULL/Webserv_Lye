@@ -13,7 +13,7 @@ SRCDIR		=		./srcs/
 
 SRCS		=		${addprefix ${SRCDIR}, ${SRCNAME}}
 
-INCDIR		=		./includes/
+INC		=		-I ./includes/ -I /libft_cpp/
 
 NAME		=		webserv
 
@@ -21,23 +21,29 @@ LIB_NAME	=		libft.a
 
 CC			=		clang++
 
-CF			=		-Wall -Wextra -Werror -std=c++98 -I ${INCDIR} ${SRCS}
+CF			=		-Wall -Wextra -Werror -std=c++98 ${INC} ${SRCS}
 DCF			=		-g ${SRCS} -fsanitize=address
 
 ${NAME}     :
 					make all -C "./libft_cpp"
 					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
-					${CC} ${CF} ${LIB_NAME} -I $(INCDIR) -o ${NAME} 
+					${CC} ${CF} ${LIB_NAME} ${INC} -o ${NAME} 
 
 dbg		:
 					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
 					lldb webserv -- configs/test.conf
 
 test		:
-					${CC} ${DCF} ${LIB_NAME} -I $(INCDIR) -o ${NAME}
+					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
 					rm -rf ./tests/put_test/file_should_exist_after
 					rm -rf .res_*
 					./webserv configs/test.conf
+
+test_hyeonski:
+					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
+					rm -rf ./tests/put_test/file_should_exist_after
+					rm -rf .res_*
+					./webserv configs/test_hyeonski.conf
 
 fclean		:
 					make fclean -C "./libft_cpp"
@@ -49,4 +55,4 @@ re			:		fclean all
 
 all         :      	${NAME}
 
-.PHONY		:		fclean re all test ${NAME}
+.PHONY		:		fclean re test
