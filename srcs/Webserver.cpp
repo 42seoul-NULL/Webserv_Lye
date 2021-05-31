@@ -156,7 +156,7 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	size_t pos;
 	std::string uri_loc = "";
 
-	std::cout << uri << std::endl;
+	std::cout <<"uri: [" << uri << "] uri print in Webserver.cpp 159line" << std::endl;
 
 	pos = uri.find('.');
 	if (pos != std::string::npos)
@@ -186,7 +186,7 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	Location *ret = &loc_map["/"];
 
 	std::string key = "";
-	std::cout << uri_loc << std::endl;
+	std::cout << "[" << uri_loc << "] uri_loc print in Webserver.cpp in 189 line" << std::endl;
 	// std::cout << ret.getLocationName() << std::endl;
 	// for (std::map<std::string, Location>::iterator iter = loc_map.begin(); iter != loc_map.end(); iter++)
 	// {
@@ -276,10 +276,7 @@ bool	Webserver::run(struct timeval timeout)
 				{
 					// std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
-					
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
-
-
 				}
 				else if (fd->getType() == ERROR_RESOURCE_FDTYPE)
 				{
@@ -378,6 +375,9 @@ bool	Webserver::run(struct timeval timeout)
 						FT_FD_CLR(i, &(MANAGER->getWrites()));
 						FT_FD_CLR(i, &(MANAGER->getErrors()));
 						close(i);
+						{
+							std::cout << "******************** resource fd close : " << fd << std::endl;
+						}
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -423,6 +423,7 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
+					std::cout << "jayun error\n";
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
 					disconnect_client(*(client_fd->to_client));
 					std::cerr << "client error!" << std::endl;
@@ -442,6 +443,9 @@ bool	Webserver::run(struct timeval timeout)
 						FT_FD_CLR(i, &(MANAGER->getWrites()));
 					FT_FD_CLR(i, &(MANAGER->getErrors()));
 					close(i);
+					{
+						std::cout << "******************** resource fd close : " << fd << std::endl;
+					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{

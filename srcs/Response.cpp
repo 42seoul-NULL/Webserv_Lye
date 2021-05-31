@@ -80,7 +80,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			return ;
 		}
 
-		if (this->file_size == read_size)
+		if (this->file_size == (size_t)read_size)
 		{
 			buf[read_size] = '\0';
 			this->cgi_raw += std::string(buf);
@@ -133,6 +133,9 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		FT_FD_CLR(fd, &(MANAGER->getReads()));
 		FT_FD_CLR(fd, &(MANAGER->getErrors()));
 		close(fd);
+		{
+			std::cout << "******************** resource fd close : " << fd << std::endl;
+		}
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL); // 500 Error
@@ -149,6 +152,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 
 void		Response::tryMakePutResponse(Request &request)
 {
+	(void)request;
 	this->status = 201;
 	this->generateDate();
 	this->generateServer();

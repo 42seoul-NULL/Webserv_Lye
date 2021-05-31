@@ -218,9 +218,11 @@ void	Request::makeRequestHeader(void)
 	}
 
 	// 맵 출력용
-	std::cout << "size = " <<  headers.size() << std::endl;
+	std::cout << "@@@@ headers size = " <<  headers.size() << std::endl;
 	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
 		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
+
+	std::cout << "cout in request.cpp 225 line finish\n\n";
 
 	size_t pos = this->raw_request.find("\r\n\r\n");
 	if (this->raw_request.length() > pos + 4)
@@ -267,6 +269,10 @@ bool	Request::isComplete(void)
 			{
 				if (temp_body.length() > 5) //0\r\n\r\n 말고 더 있으면
 					this->raw_request += this->temp_body.substr(found + 4); // 마지막청크 다음 데이터 raw_request에 저장
+				else if (temp_body.length() == 5)
+					;
+				else
+					return (false);
 				this->temp_body.clear();
 				this->status = PARSING_HEADER;
 				return (true);

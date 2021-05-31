@@ -37,7 +37,7 @@ test		:
 					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
 					rm -rf ./tests/put_test/file_should_exist_after
 					rm -rf .res_*
-					./webserv configs/test.conf
+					./webserv configs/test.conf &> test_result.txt
 
 test_hyeonski:
 					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
