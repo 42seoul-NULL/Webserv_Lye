@@ -98,6 +98,8 @@ int Client::readRequest(void)
 	if (readed <= 0)
 		return (DISCONNECT_CLIENT);
 	buf[readed] = 0;
+	
+	std::cout << "received raw request:[" << buf << "]" << std::endl;
 
 	this->request.getRawRequest() += buf;
 
