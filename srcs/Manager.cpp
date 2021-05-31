@@ -324,7 +324,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 	}
 	catch(const char *e)
 	{
-		std::cout << e << std::endl;
+		//std::cout << e << std::endl;
 		return (false);
 	}
 	return (true);	
@@ -457,7 +457,7 @@ void		Manager::show()
 {
 	for (std::map<int, Server>::iterator iter = this->server_configs.begin(); iter != this->server_configs.end(); iter++)
 	{
-		std::cout << "server key : " << iter->first << std::endl;
+		//std::cout << "server key : " << iter->first << std::endl;
 		iter->second.show();
 	}
 }

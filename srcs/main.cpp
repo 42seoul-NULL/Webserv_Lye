@@ -17,7 +17,7 @@ int	main(int ac, char **av)
 
 	try
 	{
-		MANAGER->getWebserver().initServers(5);
+		MANAGER->getWebserver().initServers(200);
 		MANAGER->getWebserver().run(timeout);
 	}
 	catch(const char *e)

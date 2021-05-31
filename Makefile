@@ -22,7 +22,7 @@ LIB_NAME	=		libft.a
 CC			=		clang++
 
 CF			=		-Wall -Wextra -Werror -std=c++98 ${INC} ${SRCS}
-DCF			=		-g ${SRCS} -fsanitize=address
+DCF			=		-g ${SRCS} 
 
 ${NAME}     :
 					make all -C "./libft_cpp"
@@ -37,7 +37,7 @@ test		:
 					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
 					rm -rf ./tests/put_test/file_should_exist_after
 					rm -rf .res_*
-					./webserv configs/test.conf &> test_result.txt
+					./webserv configs/test.conf
 
 test_hyeonski:
 					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}

@@ -66,7 +66,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			lseek(fd, 0, SEEK_SET);
 			this->seek_flag = true;
 			struct stat sb;
-			std::cout << "cgi_response_resource_fd:[" << fd << "]" << std::endl;
+			//std::cout << "cgi_response_resource_fd:[" << fd << "]" << std::endl;
 			if (stat(std::string(".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), &sb) == -1)
 			{
 				std::cerr << "stat err!" << std::endl;
@@ -93,7 +93,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			{
 				buf[read_size] = '\0';
 				this->cgi_raw += std::string(buf);
-				// std::cout << this->file_size << std::endl;
+				// //std::cout << this->file_size << std::endl;
 				return ;
 			}
 		}
@@ -101,7 +101,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		// std::size_t file_size = sb.st_size;
 
 		delete resource_fd;
-		// std::cout << "read size: " << read_size << std::endl;
+		// //std::cout << "read size: " << read_size << std::endl;
 		MANAGER->getFDTable()[fd] = NULL;
 		MANAGER->getFDTable().erase(fd);
 		FT_FD_CLR(fd, &(MANAGER->getReads()));
@@ -134,14 +134,14 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		FT_FD_CLR(fd, &(MANAGER->getErrors()));
 		close(fd);
 		{
-			std::cout << "******************** resource fd close : " << fd << std::endl;
+			//std::cout << "******************** resource fd close : " << fd << std::endl;
 		}
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
-		// std::cout << this->body.length() << std::endl;
+		// //std::cout << this->body.length() << std::endl;
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
@@ -170,9 +170,9 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
 	// for (std::vector<std::string>::const_iterator iter = status_line.begin(); iter != status_line.end(); iter++)
 	// {
-	// 	std::cout << *iter << std::endl;
+	// 	//std::cout << *iter << std::endl;
 	// }
-	// std::cout << "cgi_raw:" << cgi_raw << std::endl;
+	// //std::cout << "cgi_raw:" << cgi_raw << std::endl;
 	this->status = ft_atoi(status_line[1]);
 
 	// Header
@@ -278,7 +278,7 @@ void	Response::generateContentLocation(Request &request)
 void	Response::generateContentLength(void)
 {
 	this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
-	std::cout << "Content Length:[" << this->body.length() << "]" << std::endl;
+	//std::cout << "Content Length:[" << this->body.length() << "]" << std::endl;
 }
 
 void	Response::generateContentType(Request &request)

@@ -132,7 +132,7 @@ bool	Webserver::initServers(int queue_size)
 		if (listen(iter->second.getSocketFd(), queue_size) == -1)
 			throw strerror(errno);
 
-		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
+		//std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 
 		// 서버소켓은 read 와 error 만 검사.
 		FT_FD_SET(iter->second.getSocketFd(), &(MANAGER->getReads()));
@@ -156,7 +156,7 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	size_t pos;
 	std::string uri_loc = "";
 
-	std::cout <<"uri: [" << uri << "] uri print in Webserver.cpp 159line" << std::endl;
+	//std::cout <<"uri: [" << uri << "] uri print in Webserver.cpp 159line" << std::endl;
 
 	pos = uri.find('.');
 	if (pos != std::string::npos)
@@ -186,12 +186,12 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	Location *ret = &loc_map["/"];
 
 	std::string key = "";
-	std::cout << "[" << uri_loc << "] uri_loc print in Webserver.cpp in 189 line" << std::endl;
-	// std::cout << ret.getLocationName() << std::endl;
+	//std::cout << "[" << uri_loc << "] uri_loc print in Webserver.cpp in 189 line" << std::endl;
+	// //std::cout << ret.getLocationName() << std::endl;
 	// for (std::map<std::string, Location>::iterator iter = loc_map.begin(); iter != loc_map.end(); iter++)
 	// {
-	// 	std::cout << iter->second.getLocationName() << std::endl;
-	// 	std::cout << iter->second.getRoot() << std::endl;
+	// 	//std::cout << iter->second.getLocationName() << std::endl;
+	// 	//std::cout << iter->second.getRoot() << std::endl;
 	// }
 	for (std::string::const_iterator iter = uri_loc.begin(); iter != uri_loc.end(); iter++)
 	{
@@ -222,7 +222,7 @@ bool	Webserver::run(struct timeval timeout)
 	while (1)
 	{
 		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
-		// std::cout << "check select" << std::endl;
+		// //std::cout << "check select" << std::endl;
 
 		cpy_reads = MANAGER->getReads();
 		cpy_writes = MANAGER->getWrites();
@@ -263,7 +263,7 @@ bool	Webserver::run(struct timeval timeout)
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
 						disconnect_client(*client);
-						std::cout << "disconnected: " << i << std::endl;
+						//std::cout << "disconnected: " << i << std::endl;
 						continue ;
 					}
 					if (client->getStatus() == REQUEST_COMPLETE)
@@ -274,13 +274,13 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
 				{
-					// std::cout << "try to read resource" << std::endl;
+					// //std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
 				}
 				else if (fd->getType() == ERROR_RESOURCE_FDTYPE)
 				{
-					std::cout << "try to read error resource" << std::endl;
+					//std::cout << "try to read error resource" << std::endl;
 
 					char buf[BUFFER_SIZE + 1];
 					int read_size;
@@ -306,18 +306,18 @@ bool	Webserver::run(struct timeval timeout)
 			{
 				if (fd->getType() == CLIENT_FDTYPE)
 				{
-					// std::cout << "select: client write" << std::endl;
+					// //std::cout << "select: client write" << std::endl;
 					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
 					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
-					// std::cout << "try to response" << std::endl;
+					// //std::cout << "try to response" << std::endl;
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
 						
-						std::cout << "ready to response" << std::endl;
-						if (client->getResponse().getHeaders()["Content-Length"] == "0")
-							std::cout << "raw:" << client->getResponse().getRawResponse() << std::endl;
+						//std::cout << "ready to response" << std::endl;
+						// if (client->getResponse().getHeaders()["Content-Length"] == "0")
+							//std::cout << "raw:" << client->getResponse().getRawResponse() << std::endl;
 						if (client->getResponse().getRawResponse().length() > BUFFER_SIZE)
 						{
 							int write_size = write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
@@ -332,14 +332,14 @@ bool	Webserver::run(struct timeval timeout)
 								client->getResponse().getRawResponse().erase(0, write_size);
 								continue ;
 							}
-							// std::cout << client->getResponse().getRawResponse() << std::endl;
-							std::cout << "Content Length: " << client->getResponse().getHeaders()["Content-Length"] << std::endl;
+							// //std::cout << client->getResponse().getRawResponse() << std::endl;
+							//std::cout << "Content Length: " << client->getResponse().getHeaders()["Content-Length"] << std::endl;
 							client->getResponse().getRawResponse().clear();
 							client->getRequest().initRequest();
 							client->getResponse().initResponse();
 							client->setStatus(REQUEST_RECEIVING);
 						}
-						std::cout << "finished response" << std::endl;
+						//std::cout << "finished response" << std::endl;
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
@@ -358,7 +358,7 @@ bool	Webserver::run(struct timeval timeout)
 					}
 					else
 					{
-						// std::cout << "data: " << resource_fd->getData() << std::endl;
+						// //std::cout << "data: " << resource_fd->getData() << std::endl;
 						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
 						if (static_cast<size_t>(write_size) < resource_fd->getData().length())
 						{
@@ -367,7 +367,7 @@ bool	Webserver::run(struct timeval timeout)
 						}
 
 						resource_fd->getData().clear();
-						std::cout << "resource writing end" << std::endl;
+						//std::cout << "resource writing end" << std::endl;
 						resource_fd->to_client->getResponse().tryMakePutResponse(resource_fd->to_client->getRequest());
 						delete fd;
 						MANAGER->getFDTable()[i] = NULL;
@@ -376,7 +376,7 @@ bool	Webserver::run(struct timeval timeout)
 						FT_FD_CLR(i, &(MANAGER->getErrors()));
 						close(i);
 						{
-							std::cout << "******************** resource fd close : " << fd << std::endl;
+							//std::cout << "******************** resource fd close : " << fd << std::endl;
 						}
 					}
 				}
@@ -402,7 +402,7 @@ bool	Webserver::run(struct timeval timeout)
 						}
 						pipefd->getData().clear();
 
-						std::cout << "write cgi pipe end" << std::endl;
+						//std::cout << "write cgi pipe end" << std::endl;
 						close(pipefd->fd_read);
 						close(i);
 						delete fd;
@@ -423,7 +423,7 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
-					std::cout << "jayun error\n";
+					//std::cout << "jayun error\n";
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
 					disconnect_client(*(client_fd->to_client));
 					std::cerr << "client error!" << std::endl;
@@ -431,7 +431,7 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
-					std::cout << "resource error!" << std::endl;
+					//std::cout << "resource error!" << std::endl;
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
 
 					client->getResponse().makeErrorResponse(500, NULL);
@@ -444,12 +444,12 @@ bool	Webserver::run(struct timeval timeout)
 					FT_FD_CLR(i, &(MANAGER->getErrors()));
 					close(i);
 					{
-						std::cout << "******************** resource fd close : " << fd << std::endl;
+						//std::cout << "******************** resource fd close : " << fd << std::endl;
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
-					std::cout << "cgi pipe error!" << std::endl;
+					//std::cout << "cgi pipe error!" << std::endl;
 
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
 
@@ -470,13 +470,13 @@ int Webserver::prepareResponse(Client &client)
 {
 	Location &location = this->getPerfectLocation( *client.getServer(), client.getRequest().getUri() );
 
-	std::cout << "location:" << location.getLocationName() << std::endl;
+	//std::cout << "location:" << location.getLocationName() << std::endl;
 	// auth 체크 - 401
 	if (location.getAuthKey() != ""
 		&& (client.getRequest().getHeaders().count("Authorization") == 0 // decode 필요
 		|| !client.getServer()->isCorrectAuth(location, client)))
 	{
-		std::cout << "auth failed" << std::endl;
+		//std::cout << "auth failed" << std::endl;
 		client.getResponse().makeErrorResponse(401, &location);
 		return (401);
 	}
@@ -484,17 +484,17 @@ int Webserver::prepareResponse(Client &client)
 	// Allowed Method인지 체크 - 405
 	if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
 	{
-		std::cout << "method not allowed" << std::endl;
+		//std::cout << "method not allowed" << std::endl;
 		client.getResponse().makeErrorResponse(405, &location);
 		return (405);
 	}
 	
 	// client_max_body_size 체크
-	std::cout << "body size:[" << client.getRequest().getRawBody().length() << "]" << std::endl;
-	std::cout << "max body size:[" << location.getRequestMaxBodySize() << "]" << std::endl;
+	//std::cout << "body size:[" << client.getRequest().getRawBody().length() << "]" << std::endl;
+	//std::cout << "max body size:[" << location.getRequestMaxBodySize() << "]" << std::endl;
 	if (client.getRequest().getRawBody().length() > static_cast<size_t>(location.getRequestMaxBodySize()))
 	{
-		std::cout << "over max body size" << std::endl;
+		//std::cout << "over max body size" << std::endl;
 		client.getResponse().makeErrorResponse(413, &location);
 		return (413);
 	}
@@ -502,7 +502,7 @@ int Webserver::prepareResponse(Client &client)
 	//리다이렉션 체크
 	if (location.getRedirectReturn() != -1)
 	{
-		std::cout << "redirection response" << std::endl;
+		//std::cout << "redirection response" << std::endl;
 		client.getResponse().makeRedirectResponse(location);
 		return (REDIRECT_RESPONSE);
 	}
@@ -510,7 +510,7 @@ int Webserver::prepareResponse(Client &client)
 	// response
 	if (client.getServer()->isCgiRequest(location, client.getRequest()))
 	{
-		std::cout << "cgi response" << std::endl;
+		//std::cout << "cgi response" << std::endl;
 		return (CGI_RESPONSE);
 	}
 	else
@@ -521,14 +521,14 @@ int Webserver::prepareResponse(Client &client)
 
 int Webserver::prepareGeneralResponse(Client &client, Location &location)
 {
-	std::cout << "general response" << std::endl;
+	//std::cout << "general response" << std::endl;
 
 	std::string uri = client.getRequest().getUri().substr(0, client.getRequest().getUri().find('?'));
 
 	
 	if (client.getRequest().getMethod() == "GET" || client.getRequest().getMethod() == "HEAD" || client.getRequest().getMethod() == "POST")
 	{
-		std::cout << "GET or HEAD or POST" << std::endl;
+		//std::cout << "GET or HEAD or POST" << std::endl;
 
 		if (uri[uri.length() - 1] != '/')
 			uri += '/';
@@ -539,14 +539,14 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		else
 			path = location.getRoot() + uri.substr(location.getLocationName().length());
 
-		std::cout << "path:[" << path << "]" << std::endl;
+		//std::cout << "path:[" << path << "]" << std::endl;
 		struct stat sb;
 		if (stat(path.c_str(), &sb) == -1)
 		{
 			path.erase(--(path.end())); // '/' 떼보고 stat 해봐서
 			if (stat(path.c_str(), &sb) == -1) // 없으면 404
 			{
-				std::cout << "file not found - 404" << std::endl;
+				//std::cout << "file not found - 404" << std::endl;
 				client.getResponse().makeErrorResponse(404, &location);
 				return (404);		
 			}
@@ -555,7 +555,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		
 		if (path[path.length() - 1] == '/') // 디렉토리
 		{
-			std::cout << "check autoindex" << std::endl;
+			//std::cout << "check autoindex" << std::endl;
 			std::string res = location.checkAutoIndex(path);
 			if (res == "404")
 			{
@@ -573,9 +573,9 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 
 		client.getRequest().setPath(path);
 		
-		std::cout << "open GET - requested file" << std::endl;
+		//std::cout << "open GET - requested file" << std::endl;
 		int get_fd = open(path.c_str(), O_RDONLY);
-		std::cout << "resource fd :" << get_fd << std::endl;
+		//std::cout << "resource fd :" << get_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(get_fd, file_fd));
 		FT_FD_SET(get_fd, &(MANAGER->getReads()));
@@ -610,16 +610,16 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 
 		if (path[path.length() - 1] == '/' || S_ISDIR(sb.st_mode))
 		{
-			std::cout << "put to directory" << std::endl;
-			std::cout << path << std::endl;
+			//std::cout << "put to directory" << std::endl;
+			//std::cout << path << std::endl;
 			client.getResponse().makeErrorResponse(400, &location);
 			return (400);
 		}
 
-		std::cout << "path: " << path << std::endl;
+		//std::cout << "path: " << path << std::endl;
 		client.getRequest().setPath(path);
 		int put_fd = client.getServer()->createFileWithDirectory(path);
-		std::cout << "resource fd :" << put_fd << std::endl;
+		//std::cout << "resource fd :" << put_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		file_fd->setData(const_cast<std::string &>(client.getRequest().getRawBody()));
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));

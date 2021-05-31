@@ -97,7 +97,7 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	std::cout << "\033[32m server connection called \033[0m" << std::endl;	
+	//std::cout << "\033[32m server connection called \033[0m" << std::endl;	
 	int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_size);
 	fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
@@ -113,7 +113,7 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
 	MANAGER->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 
-	std::cout << "connected client : " << client_socket << std::endl;
+	//std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
 }
 
@@ -134,7 +134,7 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
 		return (false);
 	
-	// std::cout << "cgi body: " << request.getRawBody() << std::endl;
+	// //std::cout << "cgi body: " << request.getRawBody() << std::endl;
 	CGI	cgi;
 	cgi.testCGICall(request, location, res);
 	return (true);
@@ -174,14 +174,14 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 //for test
 void		Server::show()
 {
-	std::cout << "ip	:	" << this->ip << std::endl;
-	std::cout << "port	:	" << this->port << std::endl;
-	std::cout << "server_name	:	" << this->server_name << std::endl;
-	std::cout << "============= location start =============" << std::endl;
+	//std::cout << "ip	:	" << this->ip << std::endl;
+	//std::cout << "port	:	" << this->port << std::endl;
+	//std::cout << "server_name	:	" << this->server_name << std::endl;
+	//std::cout << "============= location start =============" << std::endl;
 	for (std::map<std::string, Location>::iterator iter = locations.begin(); iter != locations.end(); iter++)
 	{
-		std::cout << "=== Location Key : " << iter->first << " ===" << std::endl;
+		//std::cout << "=== Location Key : " << iter->first << " ===" << std::endl;
 		iter->second.show();
 	}
-	std::cout << "============= location end ===============" << std::endl;
+	//std::cout << "============= location end ===============" << std::endl;
 }	

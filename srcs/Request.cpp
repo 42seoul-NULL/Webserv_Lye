@@ -165,7 +165,7 @@ bool	Request::tryMakeRequest(void)
 
 void	Request::makeStartLine(void)
 {
-	// std::cout <<"|" << this->raw_request  << "|" << std::endl;
+	// //std::cout <<"|" << this->raw_request  << "|" << std::endl;
 	std::size_t	found = this->raw_request.find("\r\n");
 	std::string start_line = this->raw_request.substr(0, found);
 
@@ -218,11 +218,11 @@ void	Request::makeRequestHeader(void)
 	}
 
 	// 맵 출력용
-	std::cout << "@@@@ headers size = " <<  headers.size() << std::endl;
-	for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
-		std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
+	//std::cout << "@@@@ headers size = " <<  headers.size() << std::endl;
+	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
+		//std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
 
-	std::cout << "cout in request.cpp 225 line finish\n\n";
+	//std::cout << "cout in request.cpp 225 line finish\n\n";
 
 	size_t pos = this->raw_request.find("\r\n\r\n");
 	if (this->raw_request.length() > pos + 4)
