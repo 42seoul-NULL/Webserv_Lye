@@ -47,8 +47,6 @@ class Server
 		int	createFileWithDirectory(std::string path);
 		bool isCorrectAuth(Location &location, Client &client);
 
-		//for test//
-		void	show();
 };
 
 #endif

@@ -120,8 +120,6 @@ int Server::acceptClient(int server_fd, int &fd_max)
 bool Server::isCgiRequest(Location &location, Request &request)
 {
 	std::vector<std::string> &cgi_extensions = location.getCgiExtensions();
-	// uri에서 cgi extension 파싱하여 location의 그것과 매칭되는지 확인
-	// 매칭되면 cgi 처리, 아니면 일단 response 만들러 ㄱㄱ
 
 	size_t dot_pos = request.getUri().find('.');
 	if (dot_pos == std::string::npos)
@@ -133,12 +131,11 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
 		return (false);
-
-	// //std::cout << "cgi body: " << request.getRawBody() << std::endl;
-
+	
 	while (request.getUri()[dot_pos] != '/')
 		dot_pos--;
 	res = request.getUri().substr(dot_pos + 1, ext_end - dot_pos - 1);
+
 
 	CGI	cgi;
 	cgi.testCGICall(request, location, res);
@@ -175,18 +172,3 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 		return (false);
 	return (true);
 }
-
-//for test
-void		Server::show()
-{
-	//std::cout << "ip	:	" << this->ip << std::endl;
-	//std::cout << "port	:	" << this->port << std::endl;
-	//std::cout << "server_name	:	" << this->server_name << std::endl;
-	//std::cout << "============= location start =============" << std::endl;
-	for (std::map<std::string, Location>::iterator iter = locations.begin(); iter != locations.end(); iter++)
-	{
-		//std::cout << "=== Location Key : " << iter->first << " ===" << std::endl;
-		iter->second.show();
-	}
-	//std::cout << "============= location end ===============" << std::endl;
-}	

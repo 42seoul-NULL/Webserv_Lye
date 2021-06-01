@@ -579,10 +579,8 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			return (400);
 		}
 
-		//std::cout << "path: " << path << std::endl;
 		client.getRequest().setPath(path);
 		int put_fd = client.getServer()->createFileWithDirectory(path);
-		//std::cout << "resource fd :" << put_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		file_fd->setData(const_cast<std::string &>(client.getRequest().getRawBody()));
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));

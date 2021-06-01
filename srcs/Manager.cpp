@@ -218,8 +218,10 @@ bool	Manager::parseConfig(const char *config_file_path)
 	catch(const char *e)
 	{
 		std::cout << e << std::endl;
+		close(fd);
 		return (false);
 	}
+	close(fd);
 	return (true);	
 }
 
@@ -405,16 +407,3 @@ void	Manager::initStatusCode(void)
 	this->status_code["511"] = "Network Authentication Required";
 	this->status_code["599"] = "Network Connect Timeout Error";
 }
-
-
-//for test
-void		Manager::show()
-{
-	for (std::map<int, Server>::iterator iter = this->server_configs.begin(); iter != this->server_configs.end(); iter++)
-	{
-		//std::cout << "server key : " << iter->first << std::endl;
-		iter->second.show();
-	}
-}
-/////////////////// class Manager end ////////////////////
-//////////////////////////////////////////////////////////

@@ -8,7 +8,6 @@ int	main(int ac, char **av)
 
 	if(!MANAGER->parseConfig(av[1]))
 		return (1);
-	MANAGER->show();
 
 	struct timeval timeout;
 

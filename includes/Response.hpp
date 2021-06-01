@@ -29,8 +29,6 @@ class Response
 
 	public:
 		Response();
-		//Response(const Response &src);
-		//Response& operator=(const Response &src);
 		virtual	~Response();
 
 		std::map<std::string, std::string>&	getHeaders(void);
@@ -64,7 +62,6 @@ class Response
 		void	makeStartLine();
 		void	makeErrorResponse(int status, Location *location);
 		void	makeAutoIndexResponse(std::string &path);
-		// void	makeCGIStartLine();
 		
 		void	makeRawResponse(void);
 		void	initResponse(void);

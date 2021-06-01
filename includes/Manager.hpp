@@ -19,7 +19,7 @@ class Manager
 		bool	returnFalseWithMsg(const char *str);
 		bool	isReserved(const std::string &src);
 
-		std::map<int, Server> server_configs; // config용
+		std::map<int, Server> server_configs;
 		static Manager*	instance;
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
@@ -48,8 +48,6 @@ class Manager
 		fd_set &getErrors(void);
 		int decode_base64(const char * text, char * dst, int numBytes);
 
-		//for test
-		void	show();
 };
 
 #endif
