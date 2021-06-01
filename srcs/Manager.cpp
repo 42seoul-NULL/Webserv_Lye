@@ -75,6 +75,15 @@ std::map<std::string, std::string> &Manager::getStatusCode()
 	return (this->status_code);
 }
 
+void	Manager::deleteFromFDTable(int fd, FDType *fd_type, t_fdset set)
+{
+	delete fd_type;
+	MANAGER->getFDTable()[fd] = NULL;
+	MANAGER->getFDTable().erase(fd);
+	clrFDonTable(fd, set);
+	close(fd);
+}
+
 bool	Manager::isReserved(const std::string &src)
 {
 	if (src == "server" || 

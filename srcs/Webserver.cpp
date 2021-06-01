@@ -49,13 +49,9 @@ void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	clrFDonTable(client_socket_fd, FD_RDWR);
-	close(client_socket_fd);
-	
 	Server *server = client.getServer();
 	Client *client_pointer = &client;
 	server->getClients().erase(client_socket_fd);
-
 
 	ResourceFD *resource_fdtype = NULL;
 	PipeFD *pipe_fdtype = NULL;
@@ -73,9 +69,8 @@ void	Webserver::disconnect_client(Client &client)
 				temp++;
 				MANAGER->getFDTable().erase(iter->first);
 				iter = temp;
+				continue;
 			}
-			else
-				iter++;
 		}
 		else if ((pipe_fdtype = dynamic_cast<PipeFD *>(iter->second)))
 		{
@@ -88,19 +83,13 @@ void	Webserver::disconnect_client(Client &client)
 				temp++;
 				MANAGER->getFDTable().erase(iter->first);
 				iter = temp;
+				continue;
 			}
-			else
-				iter++;
 		}
-		else
-			iter++;
+		iter++;
 	}
 
-	delete MANAGER->getFDTable()[client_socket_fd];
-	MANAGER->getFDTable()[client_socket_fd] = NULL;
-	MANAGER->getFDTable().erase(client_socket_fd);
-
-	return ;
+	MANAGER->deleteFromFDTable(client_socket_fd, MANAGER->getFDTable()[client_socket_fd], FD_RDWR);
 }
 
 bool	Webserver::initServers(int queue_size)
@@ -256,9 +245,7 @@ bool	Webserver::run(struct timeval timeout)
 						resource_fd->to_client->getResponse().makeStartLine();
 						resource_fd->to_client->getResponse().makeRawResponse();
 						resource_fd->to_client->setStatus(RESPONSE_COMPLETE);
-						delete fd;
-						MANAGER->getFDTable().erase(i);
-						clrFDonTable(i, FD_RDONLY);
+						MANAGER->deleteFromFDTable(i, fd, FD_RDONLY);
 					}
 				}
 			}
@@ -306,11 +293,7 @@ bool	Webserver::run(struct timeval timeout)
 
 						resource_fd->getData().clear();
 						resource_fd->to_client->getResponse().tryMakePutResponse(resource_fd->to_client->getRequest());
-						delete fd;
-						MANAGER->getFDTable()[i] = NULL;
-						MANAGER->getFDTable().erase(i);
-						clrFDonTable(i, FD_WRONLY);
-						close(i);
+						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -335,11 +318,7 @@ bool	Webserver::run(struct timeval timeout)
 							continue ;
 						}
 						close(pipefd->fd_read);
-						close(i);
-						delete fd;
-						MANAGER->getFDTable()[i] = NULL;
-						MANAGER->getFDTable().erase(i);
-						clrFDonTable(i, FD_WRONLY);
+						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
 			}
@@ -363,10 +342,7 @@ bool	Webserver::run(struct timeval timeout)
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
 
 					client->getResponse().makeErrorResponse(500, NULL);
-					delete fd;
-					MANAGER->getFDTable().erase(i);
-					clrFDonTable(i, FD_RDWR);
-					close(i);
+					MANAGER->deleteFromFDTable(i, fd, FD_RDWR);
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
@@ -374,10 +350,7 @@ bool	Webserver::run(struct timeval timeout)
 					std::cerr << "pipe error!" << std::endl;
 
 					client->getResponse().makeErrorResponse(500, NULL);
-					delete fd;
-					MANAGER->getFDTable().erase(i);
-					clrFDonTable(i, FD_WRONLY);
-					close(i);
+					MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 				}
 			}
 		}
@@ -462,7 +435,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			}
 			else if (res == "Index of") //autoindex list up
 			{
-				client.getResponse().makeAutoIndexResponse(path);
+				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri());
 				return (AUTOINDEX_RESPONSE) ;
 			}
 			else

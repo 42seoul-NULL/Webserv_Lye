@@ -104,12 +104,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 				return ;
 			}
 		}
-
-		delete resource_fd;
-		MANAGER->getFDTable()[fd] = NULL;
-		MANAGER->getFDTable().erase(fd);
-		clrFDonTable(fd, FD_RDONLY);
-		close(fd);
+		MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
 		unlink(("./.res_" + ft_itoa(this->client->getSocketFd())).c_str());
 		if (read_size == -1)
 		{
@@ -131,11 +126,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->body += std::string(buf);
 			return ;
 		}
-		delete resource_fd;
-		MANAGER->getFDTable()[fd] = NULL;
-		MANAGER->getFDTable().erase(fd);
-		clrFDonTable(fd, FD_RDONLY);
-		close(fd);
+		MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL); // 500 Error
@@ -396,7 +387,7 @@ void	Response::makeErrorResponse(int status, Location *location)
 	}
 }
 
-void	Response::makeAutoIndexResponse(std::string &path)
+void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 {
 	DIR		*dir_ptr;
 	struct dirent	*file;
@@ -409,10 +400,10 @@ void	Response::makeAutoIndexResponse(std::string &path)
 
 	this->body += "<html>\r\n";
 	this->body += "<head>\r\n";
-	this->body += "<title>Index of " + path + "</title>\r\n";
+	this->body += "<title>Index of " + uri + "</title>\r\n";
 	this->body += "</head>\r\n";
 	this->body += "<body bgcolor=\"white\">\r\n";
-	this->body += "<h1>Index of " + path + "</h1>\r\n";
+	this->body += "<h1>Index of " + uri + "</h1>\r\n";
 	this->body += "<hr>\r\n";
 	this->body += "<pre>\r\n";
 
@@ -426,7 +417,7 @@ void	Response::makeAutoIndexResponse(std::string &path)
 			name += '/';
 		this->body += "<a href=\"" + name + "\">" + name + "</a>\r\n";
 
-		if (stat(path.c_str(), &sb) == -1)
+		if (stat((path + name).c_str(), &sb) == -1)
 		{
 			this->start_line.clear();
 			this->body.clear();
@@ -435,13 +426,13 @@ void	Response::makeAutoIndexResponse(std::string &path)
 		}
 		timeinfo = localtime(&sb.st_mtime);
 		strftime(buffer, 4096, "%d-%b-%Y %H:%M", timeinfo);
-		this->body += "\"                                        " + std::string(buffer) + "                   ";
+		this->body += "                                        " + std::string(buffer) + "                   ";
 		if (S_ISDIR(sb.st_mode))
-			this->body += "-\"\r\n";
+			this->body += "-\r\n";
 		else
 		{
 			this->body.erase(this->body.length() - ft_itoa(sb.st_size).length() + 1);
-			this->body += ft_itoa(sb.st_size) + "\"\r\n";
+			this->body += ft_itoa(sb.st_size) + "\r\n";
 		}
 	}
 

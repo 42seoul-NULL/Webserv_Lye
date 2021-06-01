@@ -61,7 +61,7 @@ class Response
 		void	makeRedirectResponse(Location &location);
 		void	makeStartLine();
 		void	makeErrorResponse(int status, Location *location);
-		void	makeAutoIndexResponse(std::string &path);
+		void	makeAutoIndexResponse(std::string &path, const std::string &uri);
 		
 		void	makeRawResponse(void);
 		void	initResponse(void);

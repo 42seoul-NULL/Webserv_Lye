@@ -6,6 +6,7 @@
 # include "../libft_cpp/libft.hpp"
 # include "Webserver.hpp"
 # include "Server.hpp"
+# include "Type.hpp"
 
 class Client;
 class FDType;
@@ -39,6 +40,7 @@ class Manager
 		std::map<int, Server>& getServerConfigs();
 		std::map<std::string, std::string>& getMimeType();	
 		std::map<std::string, std::string>& getStatusCode();
+		void	deleteFromFDTable(int fd, FDType *fd_type, t_fdset set);
 
 		bool	parseConfig(const char *config_file_path);
 		std::map<int, FDType *> &getFDTable();
