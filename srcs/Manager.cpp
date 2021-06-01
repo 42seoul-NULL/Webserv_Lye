@@ -369,27 +369,34 @@ void ResourceFD::setData(std::string &data)
 	this->data = data;
 }
 
-PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client)
+PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data) : data(data)
 {
 	this->type = type;
 	this->pid = pid;
 	this->to_client = client;
+	this->write_idx = 0;
 }
 
-std::string &PipeFD::getData()
+const std::string &PipeFD::getData()
 {
 	return (this->data);
 }
 
-void PipeFD::setData(std::string &data)
+int PipeFD::getWriteIdx()
 {
-	this->data = data;
+	return (this->write_idx);
+}
+
+void PipeFD::setWriteIdx(int write_idx)
+{
+	this->write_idx = write_idx;
 }
 
 int FDType::getType()
 {
 	return (this->type);
 }
+
 
 Webserver &Manager::getWebserver()
 {

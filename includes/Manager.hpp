@@ -60,15 +60,18 @@ class ResourceFD : public FDType
 class PipeFD : public FDType
 {
 	private:
-		std::string data;
+		const std::string &data;
+		int write_idx;
 	public:
-		PipeFD(t_FDType type, pid_t pid, Client *client);
+		PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data);
 		pid_t pid;
 		Client *to_client;
 		int fd_read;
 
-		std::string &getData();
-		void setData(std::string &data);
+		const std::string &getData();
+		int getWriteIdx();
+
+		void setWriteIdx(int write_idx);
 		~PipeFD() {}
 };
 

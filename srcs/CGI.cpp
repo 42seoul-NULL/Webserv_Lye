@@ -60,9 +60,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	{
 		// close(this->request_fd[0]);
 		//pipe fd fd_table에 insert
-		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient());
-		pipe_fd->setData( const_cast<std::string &>(request.getRawBody()) );
-
+		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
 		pipe_fd->fd_read = request_fd[0];
 
 		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));

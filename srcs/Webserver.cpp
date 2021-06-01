@@ -327,7 +327,7 @@ bool	Webserver::run(struct timeval timeout)
 							client->getResponse().initResponse();
 							client->setStatus(REQUEST_RECEIVING);
 						}
-						std::cout << "finished response" << std::endl;
+						// std::cout << "finished response" << std::endl;
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
@@ -372,21 +372,23 @@ bool	Webserver::run(struct timeval timeout)
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
 
-					if (pipefd->getData().length() > BUFFER_SIZE)
+
+					int write_idx = pipefd->getWriteIdx();
+
+					if (pipefd->getData().length() - write_idx > BUFFER_SIZE)
 					{
-						int write_size = write(i, pipefd->getData().c_str(), BUFFER_SIZE);
-						pipefd->getData().erase(0, write_size);
+						int write_size = write(i, pipefd->getData().c_str() + write_idx, BUFFER_SIZE);
+						pipefd->setWriteIdx(write_idx + write_size);
 						continue ;
 					}
 					else
 					{
-						int write_size = write(i, pipefd->getData().c_str(), pipefd->getData().length());
-						if (static_cast<size_t>(write_size) < pipefd->getData().length())
+						int write_size = write(i, pipefd->getData().c_str() + write_idx, pipefd->getData().length() - write_idx);
+						if (static_cast<size_t>(write_size) < pipefd->getData().length() - write_idx)
 						{
-							pipefd->getData().erase(0, write_size);
+							pipefd->setWriteIdx(write_idx + write_size);
 							continue ;
 						}
-						pipefd->getData().clear();
 
 						//std::cout << "write cgi pipe end" << std::endl;
 						close(pipefd->fd_read);
