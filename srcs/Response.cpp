@@ -125,8 +125,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		// //std::cout << "read size: " << read_size << std::endl;
 		MANAGER->getFDTable()[fd] = NULL;
 		MANAGER->getFDTable().erase(fd);
-		FT_FD_CLR(fd, &(MANAGER->getReads()));
-		FT_FD_CLR(fd, &(MANAGER->getErrors()));
+		clrFDonTable(fd, FD_RDONLY);
 		close(fd);
 		unlink(("./.res_" + ft_itoa(this->client->getSocketFd())).c_str());
 		if (read_size == -1)
@@ -152,8 +151,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		delete resource_fd;
 		MANAGER->getFDTable()[fd] = NULL;
 		MANAGER->getFDTable().erase(fd);
-		FT_FD_CLR(fd, &(MANAGER->getReads()));
-		FT_FD_CLR(fd, &(MANAGER->getErrors()));
+		clrFDonTable(fd, FD_RDONLY);
 		close(fd);
 		{
 			//std::cout << "******************** resource fd close : " << fd << std::endl;
@@ -428,8 +426,7 @@ void	Response::makeErrorResponse(int status, Location *location)
 		}
 		ResourceFD *error_resource = new ResourceFD(ERROR_RESOURCE_FDTYPE, this->client);
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(fd, error_resource));
-		FT_FD_SET(fd, &(MANAGER->getReads()));
-		FT_FD_SET(fd, &(MANAGER->getErrors()));
+		setFDonTable(fd, FD_RDONLY);
 		if (MANAGER->getWebserver().getFDMax() < fd)
 		{
 			MANAGER->getWebserver().setFDMax(fd);

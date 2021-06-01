@@ -8,72 +8,7 @@
 # include "Server.hpp"
 
 class Client;
-
-typedef enum	e_FDType
-{
-	SERVER_FDTYPE,
-	CLIENT_FDTYPE,
-	RESOURCE_FDTYPE,
-	PIPE_FDTYPE,
-	CGI_RESOURCE_FDTYPE,
-	ERROR_RESOURCE_FDTYPE,
-}				t_FDType;
-
-class FDType
-{
-	protected:
-		t_FDType type;
-	public :
-		virtual ~FDType() {}
-		int getType();
-};
-
-class ServerFD : public FDType
-{
-	public :
-		ServerFD(t_FDType type);
-		~ServerFD() {}
-};
-
-class ClientFD : public FDType
-{
-	public :
-		ClientFD(t_FDType type, Client *client);
-		Client *to_client;
-		~ClientFD() {}
-};
-
-class ResourceFD : public FDType
-{
-	private:
-		std::string data;
-	public :
-		ResourceFD(t_FDType type, pid_t pid, Client *client);
-		ResourceFD(t_FDType type, Client *client);
-		pid_t pid;
-		Client *to_client;
-		std::string &getData();
-		void setData(std::string &data);
-		~ResourceFD() {}
-};
-
-class PipeFD : public FDType
-{
-	private:
-		const std::string &data;
-		int write_idx;
-	public:
-		PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data);
-		pid_t pid;
-		Client *to_client;
-		int fd_read;
-
-		const std::string &getData();
-		int getWriteIdx();
-
-		void setWriteIdx(int write_idx);
-		~PipeFD() {}
-};
+class FDType;
 
 class Manager
 {

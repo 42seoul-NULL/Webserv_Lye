@@ -8,7 +8,6 @@ CGI::CGI(void)
 {
 	this->pid = 0;
 	pipe(this->request_fd);
-	this->CGI_environment_list.clear();
 }
 
 CGI::~CGI(void)
@@ -18,15 +17,11 @@ CGI::~CGI(void)
 
 void	CGI::testCGICall(Request& request, Location& location, std::string& file_name)
 {
-	// this->setCGIEnvironmentList(request);
 	this->response_file_fd = open((".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), O_CREAT | O_TRUNC | O_RDWR, 0777);
 
 	this->pid = fork();
-	// write(this->request_fd[1], request.getRawBody().c_str(), request.getRawBody().length()); // block check
 	if (this->pid == 0)
 	{
-		// write(fd1[1], request.getRawBody().c_str(), request.getRawBody().length()); // read/write block check
-		// MANAGER->getFDTable()[this->request_fd] = new ResourceFD(PIPE_FDTYPE);
 		char **env = this->setCGIEnvironment(request, location);
 		close(this->request_fd[1]);
 		dup2(this->request_fd[0], 0);
@@ -37,7 +32,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 			lst[0] = strdup("./php-mac/bin/php-cgi");
 			lst[1] = strdup(file_name.c_str());
 			lst[2] = NULL;
-			if (execve("./php-mac/bin/php-cgi", lst, env) == -1) // select()에서 write될 때까지 기다리겠지?
+			if (execve("./php-mac/bin/php-cgi", lst, env) == -1)
 			{
 				std::cerr << "PHP CGI EXECUTE ERROR" << std::endl;
 				exit(1);
@@ -58,15 +53,12 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	}
 	else
 	{
-		// close(this->request_fd[0]);
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
 		pipe_fd->fd_read = request_fd[0];
 
 		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
-		FT_FD_SET(this->request_fd[1], &(MANAGER->getWrites())); // pipe는 writes만 해주면 될 듯
-		FT_FD_SET(this->request_fd[1], &(MANAGER->getErrors()));
-
+		setFDonTable(this->request_fd[1], FD_WRONLY); // pipe는 writes만
 		if (MANAGER->getWebserver().getFDMax() < this->request_fd[1])
 		{
 			MANAGER->getWebserver().setFDMax(this->request_fd[1]);
@@ -76,8 +68,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
 		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
 		//std::cout << "cgi_response_file_fd:[" << this->response_file_fd << "]" << std::endl;
-		FT_FD_SET(this->response_file_fd, &(MANAGER->getReads())); // reponse file은 reads 해주면 될 듯
-		FT_FD_SET(this->response_file_fd, &(MANAGER->getErrors()));
+		setFDonTable(this->response_file_fd, FD_RDONLY); // reponse file은 reads 해주면 될 듯
 		if (MANAGER->getWebserver().getFDMax() < this->response_file_fd)
 		{
 			MANAGER->getWebserver().setFDMax(this->response_file_fd);
@@ -94,32 +85,6 @@ int		*CGI::getRequestFD(void) const
 int		CGI::getResponseFileFD(void) const
 {
 	return (this->response_file_fd);
-}
-
-void	CGI::setCGIEnvironmentList(Request& request)
-{
-// 	this->CGI_environment_list.push_back("AUTH_TYPE");
-// 	this->CGI_environment_list.push_back("CONTENT_LENGTH");
-// 	this->CGI_environment_list.push_back("CONTENT_TYPE");
-// 	this->CGI_environment_list.push_back("GATEWAY_INTERFACE");
-// 	this->CGI_environment_list.push_back("PATH_INFO");
-// 	this->CGI_environment_list.push_back("PATH_TRANSLATED");
-// 	this->CGI_environment_list.push_back("QUERY_STRING");
-// 	this->CGI_environment_list.push_back("REMOTE_ADDR");
-// 	this->CGI_environment_list.push_back("REMOTE_IDENT");
-// 	this->CGI_environment_list.push_back("REMOTE_USER");
-// 	this->CGI_environment_list.push_back("REQUEST_METHOD");
-// 	this->CGI_environment_list.push_back("REQUEST_URI");
-// 	this->CGI_environment_list.push_back("SCRIPT_NAME");
-// 	this->CGI_environment_list.push_back("SERVER_NAME");
-// 	this->CGI_environment_list.push_back("SERVER_PORT");
-// 	this->CGI_environment_list.push_back("SERVER_PROTOCOL");
-// 	this->CGI_environment_list.push_back("SERVER_SOFTWARE");
-
-// 	for (std::map<std::string, std::string>::const_iterator iter = request.getHeaders().begin(); iter != request.getHeaders().end(); iter++)
-// 	{
-// 		this->CGI_environment_list.push_back("HTTP_" + iter->first);
-	// }
 }
 
 char	**CGI::setCGIEnvironment(Request& request, Location &location)
@@ -210,3 +175,5 @@ char	**CGI::makeCGIEnvironment(std::map<std::string, std::string> &cgi_env)
 	env[i] = NULL;
 	return (env);
 }
+
+

@@ -7,6 +7,7 @@ SRCNAME	=		\
 					Webserver.cpp\
 					Request.cpp\
 					Response.cpp\
+					Type.cpp\
 					CGI.cpp
 
 SRCDIR		=		./srcs/

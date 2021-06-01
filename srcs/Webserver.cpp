@@ -49,9 +49,7 @@ void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	FT_FD_CLR(client_socket_fd, &(MANAGER->getReads()));
-	FT_FD_CLR(client_socket_fd, &(MANAGER->getWrites()));
-	FT_FD_CLR(client_socket_fd, &(MANAGER->getErrors()));
+	clrFDonTable(client_socket_fd, FD_RDWR);
 	close(client_socket_fd);
 	
 	Server *server = client.getServer();
@@ -67,9 +65,7 @@ void	Webserver::disconnect_client(Client &client)
 		{
 			if (resource_fdtype->to_client == client_pointer)
 			{
-				FT_FD_CLR(iter->first, &(MANAGER->getReads()));
-				FT_FD_CLR(iter->first, &(MANAGER->getWrites()));
-				FT_FD_CLR(iter->first, &(MANAGER->getErrors()));
+				clrFDonTable(iter->first, FD_RDWR);
 				delete resource_fdtype;
 				MANAGER->getFDTable().erase(iter->first);
 			}
@@ -80,9 +76,7 @@ void	Webserver::disconnect_client(Client &client)
 		{
 			if (pipe_fdtype->to_client == client_pointer)
 			{
-				FT_FD_CLR(iter->first, &(MANAGER->getReads()));
-				FT_FD_CLR(iter->first, &(MANAGER->getWrites()));
-				FT_FD_CLR(iter->first, &(MANAGER->getErrors()));
+				clrFDonTable(iter->first, FD_RDWR);
 				delete pipe_fdtype;
 				MANAGER->getFDTable().erase(iter->first);
 			}
@@ -135,8 +129,7 @@ bool	Webserver::initServers(int queue_size)
 		//std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 
 		// 서버소켓은 read 와 error 만 검사.
-		FT_FD_SET(iter->second.getSocketFd(), &(MANAGER->getReads()));
-		FT_FD_SET(iter->second.getSocketFd(), &(MANAGER->getErrors()));
+		setFDonTable(iter->second.getSocketFd(), FD_RDONLY);
 		if (MANAGER->getWebserver().getFDMax() < iter->second.getSocketFd())
 		{
 			MANAGER->getWebserver().setFDMax(iter->second.getSocketFd());
@@ -246,9 +239,7 @@ bool	Webserver::run(struct timeval timeout)
 				if (fd->getType() == SERVER_FDTYPE)
 				{
 					int client_socket_fd = this->servers[i].acceptClient(i, this->fd_max);
-					FT_FD_SET(client_socket_fd, &(MANAGER->getReads()));
-					FT_FD_SET(client_socket_fd, &(MANAGER->getWrites()));
-					FT_FD_SET(client_socket_fd, &(MANAGER->getErrors()));
+					setFDonTable(client_socket_fd, FD_RDWR);
 					if (this->fd_max < client_socket_fd)
 					{
 						this->fd_max = client_socket_fd;
@@ -297,8 +288,7 @@ bool	Webserver::run(struct timeval timeout)
 						resource_fd->to_client->setStatus(RESPONSE_COMPLETE);
 						delete fd;
 						MANAGER->getFDTable().erase(i);
-						FT_FD_CLR(i, &(MANAGER->getReads()));
-						FT_FD_CLR(i, &(MANAGER->getErrors()));
+						clrFDonTable(i, FD_RDONLY);
 					}
 				}
 			}
@@ -358,12 +348,8 @@ bool	Webserver::run(struct timeval timeout)
 						delete fd;
 						MANAGER->getFDTable()[i] = NULL;
 						MANAGER->getFDTable().erase(i);
-						FT_FD_CLR(i, &(MANAGER->getWrites()));
-						FT_FD_CLR(i, &(MANAGER->getErrors()));
+						clrFDonTable(i, FD_WRONLY);
 						close(i);
-						{
-							//std::cout << "******************** resource fd close : " << fd << std::endl;
-						}
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
@@ -396,9 +382,7 @@ bool	Webserver::run(struct timeval timeout)
 						delete fd;
 						MANAGER->getFDTable()[i] = NULL;
 						MANAGER->getFDTable().erase(i);
-						FT_FD_CLR(i, &(MANAGER->getWrites()));
-						FT_FD_CLR(i, &(MANAGER->getErrors()));
-
+						clrFDonTable(i, FD_WRONLY);
 					}
 				}
 			}
@@ -425,13 +409,8 @@ bool	Webserver::run(struct timeval timeout)
 					client->getResponse().makeErrorResponse(500, NULL);
 					delete fd;
 					MANAGER->getFDTable().erase(i);
-					FT_FD_CLR(i, &(MANAGER->getReads()));
-					FT_FD_CLR(i, &(MANAGER->getWrites()));
-					FT_FD_CLR(i, &(MANAGER->getErrors()));
+					clrFDonTable(i, FD_RDWR);
 					close(i);
-					{
-						//std::cout << "******************** resource fd close : " << fd << std::endl;
-					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
@@ -442,8 +421,7 @@ bool	Webserver::run(struct timeval timeout)
 					client->getResponse().makeErrorResponse(500, NULL);
 					delete fd;
 					MANAGER->getFDTable().erase(i);
-					FT_FD_CLR(i, &(MANAGER->getWrites()));
-					FT_FD_CLR(i, &(MANAGER->getErrors()));
+					clrFDonTable(i, FD_WRONLY);
 					close(i);
 				}
 			}
@@ -564,8 +542,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		//std::cout << "resource fd :" << get_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(get_fd, file_fd));
-		FT_FD_SET(get_fd, &(MANAGER->getReads()));
-		FT_FD_SET(get_fd, &(MANAGER->getErrors()));
+		setFDonTable(get_fd, FD_RDONLY);
 		if (this->fd_max < get_fd)
 		{
 			this->fd_max = get_fd;
@@ -609,8 +586,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		file_fd->setData(const_cast<std::string &>(client.getRequest().getRawBody()));
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));
-		FT_FD_SET(put_fd, &(MANAGER->getWrites()));
-		FT_FD_SET(put_fd, &(MANAGER->getErrors()));
+		setFDonTable(put_fd, FD_WRONLY);
 		if (this->fd_max < put_fd)
 		{
 			this->fd_max = put_fd;

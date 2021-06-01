@@ -14,7 +14,6 @@ class CGI
 		int	request_fd[2];
 		int	response_file_fd;
 		pid_t	pid;
-		std::vector<std::string> CGI_environment_list;
 
 	public:
 		CGI(void);
@@ -24,7 +23,6 @@ class CGI
 		int		getResponseFileFD(void) const;
 
 		void	testCGICall(Request& request, Location& location, std::string& extension);
-		void	setCGIEnvironmentList(Request& request);
 		char	**setCGIEnvironment(Request& request, Location &location);
 		char	**makeCGIEnvironment(std::map<std::string, std::string> &cgi_env);
 };

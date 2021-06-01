@@ -1,5 +1,7 @@
 #include "../includes/Manager.hpp"
 #include "Location.hpp"
+#include "Type.hpp"
+
 
 Manager* Manager::instance;
 
@@ -225,69 +227,6 @@ std::map<int, FDType *> &Manager::getFDTable()
 {
 	return (this->fd_table);
 }
-
-ServerFD::ServerFD(t_FDType type)
-{
-	this->type = type;
-}
-
-ClientFD::ClientFD(t_FDType type, Client *client)
-{
-	this->type = type;
-	this->to_client = client;
-}
-
-ResourceFD::ResourceFD(t_FDType type, Client *client)
-{
-	this->type = type;
-	this->to_client = client;
-}
-
-ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
-{
-	this->type = type;
-	this->pid = pid;
-	this->to_client = client;
-}
-
-std::string &ResourceFD::getData()
-{
-	return (this->data);
-}
-
-void ResourceFD::setData(std::string &data)
-{
-	this->data = data;
-}
-
-PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data) : data(data)
-{
-	this->type = type;
-	this->pid = pid;
-	this->to_client = client;
-	this->write_idx = 0;
-}
-
-const std::string &PipeFD::getData()
-{
-	return (this->data);
-}
-
-int PipeFD::getWriteIdx()
-{
-	return (this->write_idx);
-}
-
-void PipeFD::setWriteIdx(int write_idx)
-{
-	this->write_idx = write_idx;
-}
-
-int FDType::getType()
-{
-	return (this->type);
-}
-
 
 Webserver &Manager::getWebserver()
 {
