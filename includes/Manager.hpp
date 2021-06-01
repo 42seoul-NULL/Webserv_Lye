@@ -93,6 +93,8 @@ class Manager
 		fd_set	writes;
 		fd_set	errors;
 		Webserver webserver;
+		void	initMimeType(void);
+		void	initStatusCode(void);
 
 	public	:
 		virtual ~Manager();
