@@ -101,35 +101,15 @@ int Client::readRequest(void)
 			return (DISCONNECT_CLIENT);
 		else
 		{
-			//std::cout << "jayun error" << std::endl;
+			std::cerr << "client read error!" << std::endl;
 			return (1);
 		}
 	}
 	buf[readed] = 0;
-	
-	//std::cout << "received raw request:[" << buf << "]" << std::endl;
-	//std::cout << "Client.cpp 103 line\n\n";
 
 	this->request.getRawRequest() += buf;
 
 	if (this->request.tryMakeRequest() == true)
-	{
 		this->status = REQUEST_COMPLETE;
-		//std::cout << "method:[" << this->request.getMethod() << "]" << std::endl;
-		//std::cout << "uri:[" << this->request.getUri() << "]" << std::endl;
-		//std::cout << "HttpVersion:[" << this->request.getHttpVersion() << "]" << std::endl;
-
-		//std::cout << "\n\n";
-		////std::cout << " get Raw Body !!!!!!!!!!!!!!!!!!!!!!!\n";
-		////std::cout << "[" << this->request.getRawBody() << "]" << "\n\n";
-		//std::cout << "cout in Client.cpp 112 line finish\n\n";
-	}
-	// //std::cout << "Raw Body: |" << this->request.getRawBody() << "|" << std::endl;
-	// //std::cout << "Client status: |" << this->status << "|" << std::endl;
-	// //std::cout << "Raw Request: |" << this->request.getRawRequest() << "|" << std::endl;
-	// //std::cout << "Temp Body: |" << this->request.getTempBody() << "|" << std::endl;
-	// //std::cout << std::endl;
-
 	return (1);
-	
 }

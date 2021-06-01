@@ -97,7 +97,7 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	//std::cout << "\033[32m server connection called \033[0m" << std::endl;	
+	std::cout << "\033[32m server connection called \033[0m" << std::endl;	
 	int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_size);
 	fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
@@ -109,11 +109,12 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	this->clients[client_socket].setLastRequestMs(ft_get_time());
 	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
+
 	//fd_table 세팅
 	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
 	MANAGER->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 
-	//std::cout << "connected client : " << client_socket << std::endl;
+	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
 }
 

@@ -59,6 +59,7 @@ void	Webserver::disconnect_client(Client &client)
 
 	ResourceFD *resource_fdtype = NULL;
 	PipeFD *pipe_fdtype = NULL;
+	std::map<int, FDType*>::iterator temp;
 	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); )
 	{
 		if ((resource_fdtype = dynamic_cast<ResourceFD *>(iter->second)))
@@ -66,8 +67,12 @@ void	Webserver::disconnect_client(Client &client)
 			if (resource_fdtype->to_client == client_pointer)
 			{
 				clrFDonTable(iter->first, FD_RDWR);
+				close(iter->first);
 				delete resource_fdtype;
+				temp = iter;
+				temp++;
 				MANAGER->getFDTable().erase(iter->first);
+				iter = temp;
 			}
 			else
 				iter++;
@@ -77,8 +82,12 @@ void	Webserver::disconnect_client(Client &client)
 			if (pipe_fdtype->to_client == client_pointer)
 			{
 				clrFDonTable(iter->first, FD_RDWR);
+				close(iter->first);
 				delete pipe_fdtype;
+				temp = iter;
+				temp++;
 				MANAGER->getFDTable().erase(iter->first);
+				iter = temp;
 			}
 			else
 				iter++;
@@ -105,11 +114,6 @@ bool	Webserver::initServers(int queue_size)
 		struct sockaddr_in  server_addr;
 
 		iter->second.setSocketFd(socket(PF_INET, SOCK_STREAM, 0));
-
-		// FDTable에 insert
-		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
-		MANAGER->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fdtype));
-		
 		int option = 1;
 		setsockopt(iter->second.getSocketFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
@@ -126,18 +130,14 @@ bool	Webserver::initServers(int queue_size)
 		if (listen(iter->second.getSocketFd(), queue_size) == -1)
 			throw strerror(errno);
 
-		//std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
-
-		// 서버소켓은 read 와 error 만 검사.
-		setFDonTable(iter->second.getSocketFd(), FD_RDONLY);
-		if (MANAGER->getWebserver().getFDMax() < iter->second.getSocketFd())
-		{
-			MANAGER->getWebserver().setFDMax(iter->second.getSocketFd());
-		}
-
-		
+		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 		this->servers[iter->second.getSocketFd()] = iter->second;
 
+		// FDTable에 insert
+		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
+		MANAGER->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fdtype));
+		// 서버소켓은 read 와 error 만 검사.
+		setFDonTable(iter->second.getSocketFd(), FD_RDONLY);
 		if (this->fd_max < iter->second.getSocketFd())
 			this->fd_max = iter->second.getSocketFd();
 	}
@@ -148,8 +148,6 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 {
 	size_t pos;
 	std::string uri_loc = "";
-
-	//std::cout <<"uri: [" << uri << "] uri print in Webserver.cpp 159line" << std::endl;
 
 	pos = uri.find('.');
 	if (pos != std::string::npos)
@@ -215,7 +213,6 @@ bool	Webserver::run(struct timeval timeout)
 	while (1)
 	{
 		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
-		// //std::cout << "check select" << std::endl;
 
 		cpy_reads = MANAGER->getReads();
 		cpy_writes = MANAGER->getWrites();
@@ -241,27 +238,20 @@ bool	Webserver::run(struct timeval timeout)
 					int client_socket_fd = this->servers[i].acceptClient(i, this->fd_max);
 					setFDonTable(client_socket_fd, FD_RDWR);
 					if (this->fd_max < client_socket_fd)
-					{
 						this->fd_max = client_socket_fd;
-					}
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
 					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 
-					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
-
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
 						disconnect_client(*client);
-						//std::cout << "disconnected: " << i << std::endl;
+						std::cout << "disconnected: " << i << std::endl;
 						continue ;
 					}
 					if (client->getStatus() == REQUEST_COMPLETE)
-					{
 						this->prepareResponse(*client);
-						
-					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
 				{
@@ -434,13 +424,11 @@ int Webserver::prepareResponse(Client &client)
 {
 	Location &location = this->getPerfectLocation( *client.getServer(), client.getRequest().getUri() );
 
-	//std::cout << "location:" << location.getLocationName() << std::endl;
 	// auth 체크 - 401
 	if (location.getAuthKey() != ""
 		&& (client.getRequest().getHeaders().count("Authorization") == 0 // decode 필요
 		|| !client.getServer()->isCorrectAuth(location, client)))
 	{
-		//std::cout << "auth failed" << std::endl;
 		client.getResponse().makeErrorResponse(401, &location);
 		return (401);
 	}
@@ -448,17 +436,13 @@ int Webserver::prepareResponse(Client &client)
 	// Allowed Method인지 체크 - 405
 	if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
 	{
-		//std::cout << "method not allowed" << std::endl;
 		client.getResponse().makeErrorResponse(405, &location);
 		return (405);
 	}
 	
 	// client_max_body_size 체크
-	//std::cout << "body size:[" << client.getRequest().getRawBody().length() << "]" << std::endl;
-	//std::cout << "max body size:[" << location.getRequestMaxBodySize() << "]" << std::endl;
 	if (client.getRequest().getRawBody().length() > static_cast<size_t>(location.getRequestMaxBodySize()))
 	{
-		//std::cout << "over max body size" << std::endl;
 		client.getResponse().makeErrorResponse(413, &location);
 		return (413);
 	}
@@ -466,34 +450,23 @@ int Webserver::prepareResponse(Client &client)
 	//리다이렉션 체크
 	if (location.getRedirectReturn() != -1)
 	{
-		//std::cout << "redirection response" << std::endl;
 		client.getResponse().makeRedirectResponse(location);
 		return (REDIRECT_RESPONSE);
 	}
 
 	// response
 	if (client.getServer()->isCgiRequest(location, client.getRequest()))
-	{
-		//std::cout << "cgi response" << std::endl;
 		return (CGI_RESPONSE);
-	}
 	else
-	{
 		return (this->prepareGeneralResponse(client, location));
-	}
 }
 
 int Webserver::prepareGeneralResponse(Client &client, Location &location)
 {
-	//std::cout << "general response" << std::endl;
-
 	std::string uri = client.getRequest().getUri().substr(0, client.getRequest().getUri().find('?'));
 
-	
 	if (client.getRequest().getMethod() == "GET" || client.getRequest().getMethod() == "HEAD" || client.getRequest().getMethod() == "POST")
 	{
-		//std::cout << "GET or HEAD or POST" << std::endl;
-
 		if (uri[uri.length() - 1] != '/')
 			uri += '/';
 		
@@ -503,20 +476,17 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		else
 			path = location.getRoot() + uri.substr(location.getLocationName().length());
 
-		//std::cout << "path:[" << path << "]" << std::endl;
 		struct stat sb;
 		if (stat(path.c_str(), &sb) == -1)
 		{
 			path.erase(--(path.end())); // '/' 떼보고 stat 해봐서
 			if (stat(path.c_str(), &sb) == -1) // 없으면 404
 			{
-				//std::cout << "file not found - 404" << std::endl;
 				client.getResponse().makeErrorResponse(404, &location);
 				return (404);		
 			}
 		} // if 안들어가면 디렉토리
 
-		
 		if (path[path.length() - 1] == '/') // 디렉토리
 		{
 			//std::cout << "check autoindex" << std::endl;

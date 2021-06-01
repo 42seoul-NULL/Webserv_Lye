@@ -23,7 +23,7 @@ LIB_NAME	=		libft.a
 CC			=		clang++
 
 CF			=		-Wall -Wextra -Werror -std=c++98 ${INC} ${SRCS}
-DCF			=		-g ${SRCS} 
+DCF			=		-g ${SRCS}
 
 ${NAME}     :
 					make all -C "./libft_cpp"
