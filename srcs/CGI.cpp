@@ -128,7 +128,6 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string 
 	cgi_env.insert(std::pair<std::string, std::string>("REQUEST_METHOD", request.getMethod()));
 	cgi_env.insert(std::pair<std::string, std::string>("REQUEST_URI", request.getUri()));
 
-	///////// SCRIPT_NAME
 	if (request.getUri() == path_info)
 		cgi_env.insert(std::pair<std::string, std::string>("SCRIPT_NAME", location.getRoot() + path_info.substr(1)));
 	else if (request.getUri().find(path_info) == std::string::npos)
@@ -140,8 +139,6 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string 
 		std::size_t pos = request.getUri().rfind(path_info);
 		cgi_env.insert(std::pair<std::string, std::string>("SCRIPT_NAME", location.getRoot() + request.getUri().substr(1, pos - 1)));
 	}
-	///////// SCRIPT_NAME
-	
 	
 	size_t pos = file_path.find(".");
 	size_t pos2 = file_path.find("/", pos);
@@ -151,7 +148,7 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string 
 
 
 	cgi_env.insert(std::pair<std::string, std::string>("SERVER_NAME", "127.0.0.1"));
-	// cgi_env.insert(std::pair<std::string, std::string>("SERVER_PORT", "8180")); // 상의
+	cgi_env.insert(std::pair<std::string, std::string>("SERVER_PORT", ft_itoa(request.getClient()->getServer()->getPort())));
 	cgi_env.insert(std::pair<std::string, std::string>("SERVER_PROTOCOL", "HTTP/1.1"));
 	cgi_env.insert(std::pair<std::string, std::string>("SERVER_SOFTWARE", "HyeonSkkiDashi/1.0"));
 

@@ -152,23 +152,17 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	pos = uri.find('.');
 	if (pos != std::string::npos)
 	{
-		// 	. 이 있으니까 거기까지 자르면됨
 		while (uri[pos] != '/')
 			pos--;
-		uri_loc = uri.substr(0, pos + 1); // 맨뒤에 / 붙여줄꺼면 +1 하고 아니면 안하고 어떻게할까숑 
+		uri_loc = uri.substr(0, pos + 1);
 	}
 	else
 	{
 		pos = uri.find('?');
 		if (pos != std::string::npos)
-		{	
-			// ? 있으니까 딱 거기까지 잘라버리면 될듯
 			uri_loc = uri.substr(0, pos);
-		}
 		else
-		{
 			uri_loc = uri;
-		}
 	}
 	if (uri_loc[uri_loc.length() - 1] != '/')
 		uri_loc += "/";
@@ -177,26 +171,15 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	Location *ret = &loc_map["/"];
 
 	std::string key = "";
-	//std::cout << "[" << uri_loc << "] uri_loc print in Webserver.cpp in 189 line" << std::endl;
-	// //std::cout << ret.getLocationName() << std::endl;
-	// for (std::map<std::string, Location>::iterator iter = loc_map.begin(); iter != loc_map.end(); iter++)
-	// {
-	// 	//std::cout << iter->second.getLocationName() << std::endl;
-	// 	//std::cout << iter->second.getRoot() << std::endl;
-	// }
 	for (std::string::const_iterator iter = uri_loc.begin(); iter != uri_loc.end(); iter++)
 	{
 		key += *iter;
 		if (*iter == '/')
 		{
 			if (loc_map.find(key) == loc_map.end())
-			{
 				return (*ret);
-			}
 			else
-			{
 				ret = &loc_map[key];
-			}
 		}
 	}
 	return (*ret);
@@ -255,14 +238,11 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
 				{
-					// //std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
 				}
 				else if (fd->getType() == ERROR_RESOURCE_FDTYPE)
 				{
-					//std::cout << "try to read error resource" << std::endl;
-
 					char buf[BUFFER_SIZE + 1];
 					int read_size;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
@@ -286,17 +266,12 @@ bool	Webserver::run(struct timeval timeout)
 			{
 				if (fd->getType() == CLIENT_FDTYPE)
 				{
-					// //std::cout << "select: client write" << std::endl;
-					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
-					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
-					// //std::cout << "try to response" << std::endl;
+					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
+
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
-						//std::cout << "ready to response" << std::endl;
-						// if (client->getResponse().getWriting() == false)
-						// 	client->getResponse().setWriting(true);
 						int res_idx = client->getResponse().getResIdx();
 
 						int write_size = write(i, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
@@ -307,13 +282,11 @@ bool	Webserver::run(struct timeval timeout)
 							client->getResponse().initResponse();
 							client->setStatus(REQUEST_RECEIVING);
 						}
-						// std::cout << "finished response" << std::endl;
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					// resource write - PUT
-
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 
 					if (resource_fd->getData().length() > BUFFER_SIZE)
@@ -324,7 +297,6 @@ bool	Webserver::run(struct timeval timeout)
 					}
 					else
 					{
-						// //std::cout << "data: " << resource_fd->getData() << std::endl;
 						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
 						if (static_cast<size_t>(write_size) < resource_fd->getData().length())
 						{
@@ -333,7 +305,6 @@ bool	Webserver::run(struct timeval timeout)
 						}
 
 						resource_fd->getData().clear();
-						//std::cout << "resource writing end" << std::endl;
 						resource_fd->to_client->getResponse().tryMakePutResponse(resource_fd->to_client->getRequest());
 						delete fd;
 						MANAGER->getFDTable()[i] = NULL;
@@ -344,10 +315,8 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
-
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
-
 
 					int write_idx = pipefd->getWriteIdx();
 
@@ -365,8 +334,6 @@ bool	Webserver::run(struct timeval timeout)
 							pipefd->setWriteIdx(write_idx + write_size);
 							continue ;
 						}
-
-						//std::cout << "write cgi pipe end" << std::endl;
 						close(pipefd->fd_read);
 						close(i);
 						delete fd;
@@ -385,7 +352,6 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
-					//std::cout << "jayun error\n";
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
 					disconnect_client(*(client_fd->to_client));
 					std::cerr << "client error!" << std::endl;
@@ -393,7 +359,7 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
-					//std::cout << "resource error!" << std::endl;
+					std::cerr << "resource error!" << std::endl;
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
 
 					client->getResponse().makeErrorResponse(500, NULL);
@@ -404,9 +370,8 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
-					//std::cout << "cgi pipe error!" << std::endl;
-
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
+					std::cerr << "pipe error!" << std::endl;
 
 					client->getResponse().makeErrorResponse(500, NULL);
 					delete fd;
@@ -426,7 +391,7 @@ int Webserver::prepareResponse(Client &client)
 
 	// auth 체크 - 401
 	if (location.getAuthKey() != ""
-		&& (client.getRequest().getHeaders().count("Authorization") == 0 // decode 필요
+		&& (client.getRequest().getHeaders().count("Authorization") == 0
 		|| !client.getServer()->isCorrectAuth(location, client)))
 	{
 		client.getResponse().makeErrorResponse(401, &location);
@@ -489,7 +454,6 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 
 		if (path[path.length() - 1] == '/') // 디렉토리
 		{
-			//std::cout << "check autoindex" << std::endl;
 			std::string res = location.checkAutoIndex(path);
 			if (res == "404")
 			{
@@ -503,24 +467,19 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			}
 			else
 				path = res;
-		} // 파일은 무조건 존재함
+		} // 파일은 무조건 존재
 
 		client.getRequest().setPath(path);
 		
-		//std::cout << "open GET - requested file" << std::endl;
 		int get_fd = open(path.c_str(), O_RDONLY);
-		//std::cout << "resource fd :" << get_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(get_fd, file_fd));
 		setFDonTable(get_fd, FD_RDONLY);
 		if (this->fd_max < get_fd)
-		{
 			this->fd_max = get_fd;
-		}
 	}
 	else if (client.getRequest().getMethod() == "PUT")
 	{
-		
 		bool is_no_slash = false;
 		if (uri[uri.length() - 1] != '/')
 		{
@@ -535,20 +494,15 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			path = location.getRoot() + uri.substr(location.getLocationName().length());
 
 		if (is_no_slash == true)
-		{
 			path.erase(--(path.end()));
-		}
 		struct stat sb;
 		stat(path.c_str(), &sb);
 
 		if (path[path.length() - 1] == '/' || S_ISDIR(sb.st_mode))
 		{
-			//std::cout << "put to directory" << std::endl;
-			//std::cout << path << std::endl;
 			client.getResponse().makeErrorResponse(400, &location);
 			return (400);
 		}
-
 		client.getRequest().setPath(path);
 		int put_fd = client.getServer()->createFileWithDirectory(path);
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
@@ -556,9 +510,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));
 		setFDonTable(put_fd, FD_WRONLY);
 		if (this->fd_max < put_fd)
-		{
 			this->fd_max = put_fd;
-		}
 	}
 	return (GENERAL_RESPONSE);
 }

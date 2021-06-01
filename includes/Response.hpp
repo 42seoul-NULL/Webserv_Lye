@@ -5,7 +5,7 @@
 # include <map>
 # include <vector>
 
-# define DEFAULT_STATUS 0 // 0으로 하면 되려나?
+# define DEFAULT_STATUS 0
 
 class Request;
 class Location;

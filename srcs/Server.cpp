@@ -166,9 +166,9 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 {
 	char auth_key[200];
 
+	memset(auth_key, 0, 200);
 	std::size_t found = client.getRequest().getHeaders()["Authorization"].find(' ');
 	MANAGER->decode_base64(client.getRequest().getHeaders()["Authorization"].substr(found + 1).c_str(), auth_key, client.getRequest().getHeaders()["Authorization"].length());
-
 	if (std::string(auth_key) != location.getAuthKey())
 		return (false);
 	return (true);

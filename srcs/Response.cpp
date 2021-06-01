@@ -22,16 +22,6 @@ Response::~Response()
 
 }
 
-// Response::Response(const Response &src)
-// {
-// 	(void)src;
-// }
-
-// Response& Response::operator=(const Response &src)
-// {
-// 	(void)src;
-// }
-
 std::map<std::string, std::string>&	Response::getHeaders(void)
 {
 	return (this->headers);
@@ -87,11 +77,8 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			lseek(fd, 0, SEEK_SET);
 			this->seek_flag = true;
 			struct stat sb;
-			//std::cout << "cgi_response_resource_fd:[" << fd << "]" << std::endl;
 			if (stat(std::string(".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), &sb) == -1)
-			{
 				std::cerr << "stat err!" << std::endl;
-			}
 			this->file_size = sb.st_size;
 		}
 		read_size = read(fd, buf, BUFFER_SIZE - 1);
@@ -110,19 +97,15 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		else
 		{
 			this->file_size -= read_size;
-			if (this->file_size > 0) // stat file size check 해서 작성하자....
+			if (this->file_size > 0)
 			{
 				buf[read_size] = '\0';
 				this->cgi_raw += std::string(buf);
-				// //std::cout << this->file_size << std::endl;
 				return ;
 			}
 		}
 
-		// std::size_t file_size = sb.st_size;
-
 		delete resource_fd;
-		// //std::cout << "read size: " << read_size << std::endl;
 		MANAGER->getFDTable()[fd] = NULL;
 		MANAGER->getFDTable().erase(fd);
 		clrFDonTable(fd, FD_RDONLY);
@@ -133,7 +116,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
-		this->applyCGIResponse(this->cgi_raw); // status 저장, content_type 저장, body 저장
+		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
 		this->makeRawResponse();
@@ -153,15 +136,11 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		MANAGER->getFDTable().erase(fd);
 		clrFDonTable(fd, FD_RDONLY);
 		close(fd);
-		{
-			//std::cout << "******************** resource fd close : " << fd << std::endl;
-		}
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
-		// //std::cout << this->body.length() << std::endl;
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
@@ -188,11 +167,6 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
-	// for (std::vector<std::string>::const_iterator iter = status_line.begin(); iter != status_line.end(); iter++)
-	// {
-	// 	//std::cout << *iter << std::endl;
-	// }
-	// //std::cout << "cgi_raw:" << cgi_raw << std::endl;
 	this->status = ft_atoi(status_line[1]);
 
 	// Header
@@ -205,13 +179,9 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 
 	// Body
 	if (cgi_raw.length() > header_sep + 4)
-	{
 		this->body = cgi_raw.substr(header_sep + 4);
-	}
 	else
-	{
 		this->body = "";
-	}
 }
 
 
@@ -233,7 +203,6 @@ void		Response::makeCGIResponseHeader(Request& request)
 	this->generateDate();
 	this->generateContentLanguage();
 	this->generateContentLocation(request);
-	// this->generateContentType(request);
 	this->generateServer();
 	this->generateContentLength();
 }
@@ -253,8 +222,6 @@ void	Response::generateAllow(Request& request)
 
 void	Response::generateDate(void)
 {
-	// Date 함수 살펴 본 후 작성하자.
-	// 메시지가 만들어진 날짜, 객체 생성 시의 시간? 보내기 전 Raw화 하기전의 시간?
 	time_t t;
 	char buffer[4096];
 	struct tm* timeinfo;
@@ -267,9 +234,6 @@ void	Response::generateDate(void)
 
 void	Response::generateLastModified(Request& request)
 {
-	// 파일의 최종 수정 시간.
-	// stat 함수 체크하자.
-	// URI 에 대한 파싱 진행 완료 후 stat 함수를 통해 정보를 읽은 후 수정 날짜를 규격에 맞춰서 작성하면 될듯
 	struct stat	sb;
 	struct tm*	timeinfo;
 	char buffer[4096];
@@ -281,7 +245,7 @@ void	Response::generateLastModified(Request& request)
 		return ;
 	}
 	timeinfo = localtime(&sb.st_mtime);
-	strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo); // 연도 잘 안나옴
+	strftime(buffer, 4096, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
 	this->headers.insert(std::pair<std::string, std::string>("Last-Modified", std::string(buffer)));
 }
 
@@ -298,14 +262,13 @@ void	Response::generateContentLocation(Request &request)
 void	Response::generateContentLength(void)
 {
 	this->headers.insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(this->body.length())));
-	//std::cout << "Content Length:[" << this->body.length() << "]" << std::endl;
 }
 
 void	Response::generateContentType(Request &request)
 {
 	std::string ext = request.getPath();
 	size_t pos = ext.find('.');
-	if (pos == std::string::npos) // 확장자가 없다.
+	if (pos == std::string::npos)
 		this->headers.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	else
 	{
@@ -322,7 +285,6 @@ void	Response::generateContentType(Request &request)
 
 void	Response::generateLocation(Location &location)
 {
-	// 300번대 체크 ㄱㄱ
 	this->status = location.getRedirectReturn();
 	this->headers.insert(std::pair<std::string, std::string>("Location", location.getRedirectAddr()));
 }
