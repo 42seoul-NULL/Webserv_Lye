@@ -133,8 +133,13 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
 		return (false);
-	
+
 	// //std::cout << "cgi body: " << request.getRawBody() << std::endl;
+
+	while (request.getUri()[dot_pos] != '/')
+		dot_pos--;
+	res = request.getUri().substr(dot_pos + 1, ext_end - dot_pos - 1);
+
 	CGI	cgi;
 	cgi.testCGICall(request, location, res);
 	return (true);

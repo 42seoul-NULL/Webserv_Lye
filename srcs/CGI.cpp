@@ -18,8 +18,7 @@ CGI::~CGI(void)
 
 void	CGI::testCGICall(Request& request, Location& location, std::string& file_name)
 {
-	this->setCGIEnvironmentList(request);
-	char **env = this->setCGIEnvironment(request, location);
+	// this->setCGIEnvironmentList(request);
 	this->response_file_fd = open((".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), O_CREAT | O_TRUNC | O_RDWR, 0777);
 
 	this->pid = fork();
@@ -28,6 +27,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	{
 		// write(fd1[1], request.getRawBody().c_str(), request.getRawBody().length()); // read/write block check
 		// MANAGER->getFDTable()[this->request_fd] = new ResourceFD(PIPE_FDTYPE);
+		char **env = this->setCGIEnvironment(request, location);
 		close(this->request_fd[1]);
 		dup2(this->request_fd[0], 0);
 		dup2(this->response_file_fd, 1);
@@ -100,28 +100,28 @@ int		CGI::getResponseFileFD(void) const
 
 void	CGI::setCGIEnvironmentList(Request& request)
 {
-	this->CGI_environment_list.push_back("AUTH_TYPE");
-	this->CGI_environment_list.push_back("CONTENT_LENGTH");
-	this->CGI_environment_list.push_back("CONTENT_TYPE");
-	this->CGI_environment_list.push_back("GATEWAY_INTERFACE");
-	this->CGI_environment_list.push_back("PATH_INFO");
-	this->CGI_environment_list.push_back("PATH_TRANSLATED");
-	this->CGI_environment_list.push_back("QUERY_STRING");
-	this->CGI_environment_list.push_back("REMOTE_ADDR");
-	this->CGI_environment_list.push_back("REMOTE_IDENT");
-	this->CGI_environment_list.push_back("REMOTE_USER");
-	this->CGI_environment_list.push_back("REQUEST_METHOD");
-	this->CGI_environment_list.push_back("REQUEST_URI");
-	this->CGI_environment_list.push_back("SCRIPT_NAME");
-	this->CGI_environment_list.push_back("SERVER_NAME");
-	this->CGI_environment_list.push_back("SERVER_PORT");
-	this->CGI_environment_list.push_back("SERVER_PROTOCOL");
-	this->CGI_environment_list.push_back("SERVER_SOFTWARE");
+// 	this->CGI_environment_list.push_back("AUTH_TYPE");
+// 	this->CGI_environment_list.push_back("CONTENT_LENGTH");
+// 	this->CGI_environment_list.push_back("CONTENT_TYPE");
+// 	this->CGI_environment_list.push_back("GATEWAY_INTERFACE");
+// 	this->CGI_environment_list.push_back("PATH_INFO");
+// 	this->CGI_environment_list.push_back("PATH_TRANSLATED");
+// 	this->CGI_environment_list.push_back("QUERY_STRING");
+// 	this->CGI_environment_list.push_back("REMOTE_ADDR");
+// 	this->CGI_environment_list.push_back("REMOTE_IDENT");
+// 	this->CGI_environment_list.push_back("REMOTE_USER");
+// 	this->CGI_environment_list.push_back("REQUEST_METHOD");
+// 	this->CGI_environment_list.push_back("REQUEST_URI");
+// 	this->CGI_environment_list.push_back("SCRIPT_NAME");
+// 	this->CGI_environment_list.push_back("SERVER_NAME");
+// 	this->CGI_environment_list.push_back("SERVER_PORT");
+// 	this->CGI_environment_list.push_back("SERVER_PROTOCOL");
+// 	this->CGI_environment_list.push_back("SERVER_SOFTWARE");
 
-	for (std::map<std::string, std::string>::const_iterator iter = request.getHeaders().begin(); iter != request.getHeaders().end(); iter++)
-	{
-		this->CGI_environment_list.push_back("HTTP_" + iter->first);
-	}
+// 	for (std::map<std::string, std::string>::const_iterator iter = request.getHeaders().begin(); iter != request.getHeaders().end(); iter++)
+// 	{
+// 		this->CGI_environment_list.push_back("HTTP_" + iter->first);
+	// }
 }
 
 char	**CGI::setCGIEnvironment(Request& request, Location &location)
@@ -143,7 +143,7 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location)
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", "0"));	
 
 	if (request.getHeaders()["Content-Type"] != "")
-		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", request.getHeaders()["Content-Length"]));
+		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", request.getHeaders()["Content-Type"]));
 	cgi_env.insert(std::pair<std::string, std::string>("GATEWAY_INTERFACE", "Cgi/1.1"));
 
 	//////////// PARSE_PATH_INFO

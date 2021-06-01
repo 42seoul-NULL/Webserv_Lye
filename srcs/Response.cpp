@@ -9,11 +9,12 @@
 #include <list>
 #include <dirent.h>
 
-Response::Response() : seek_flag(false)
+Response::Response() : seek_flag(false), is_writing(false)
 {
 	this->status = DEFAULT_STATUS;
 	this->client = NULL;
 	this->file_size = 0;
+	this->res_idx = 0;
 }
 
 Response::~Response()
@@ -46,9 +47,29 @@ std::string	&Response::getBody(void)
 	return (this->body);
 }
 
+size_t Response::getResIdx(void)
+{
+	return (this->res_idx);
+}
+
+bool Response::getWriting(void)
+{
+	return (this->is_writing);
+}
+
 void		Response::setClient(Client *client)
 {
 	this->client = client;
+}
+
+void Response::setResIdx(size_t res_idx)
+{
+	this->res_idx = res_idx;
+}
+
+void Response::setWriting(bool is_writing)
+{
+	this->is_writing = is_writing;
 }
 
 void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request)
@@ -107,6 +128,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		FT_FD_CLR(fd, &(MANAGER->getReads()));
 		FT_FD_CLR(fd, &(MANAGER->getErrors()));
 		close(fd);
+		unlink(("./.res_" + ft_itoa(this->client->getSocketFd())).c_str());
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL); // 500 Error
@@ -213,7 +235,7 @@ void		Response::makeCGIResponseHeader(Request& request)
 	this->generateDate();
 	this->generateContentLanguage();
 	this->generateContentLocation(request);
-	this->generateContentType(request);
+	// this->generateContentType(request);
 	this->generateServer();
 	this->generateContentLength();
 }
@@ -331,6 +353,7 @@ void	Response::makeRedirectResponse(Location &location)
 	this->makeStartLine();
 
 	this->makeRawResponse();
+	this->client->setStatus(RESPONSE_COMPLETE);
 }
 
 void	Response::makeStartLine()
@@ -343,8 +366,6 @@ void	Response::makeStartLine()
 	this->start_line += ft_itoa(this->status);
 	this->start_line += " ";
 	this->start_line += iter->second;
-	// this->start_line += "\r\n";
-	// HTTP/1.1 200 OK
 }
 
 void	Response::makeRawResponse(void)
@@ -374,6 +395,8 @@ void	Response::initResponse(void)
 	this->seek_flag = false;
 	this->cgi_raw.clear();
 	this->file_size = 0;
+	this->res_idx = 0;
+	this->is_writing = false;
 }
 
 void	Response::makeErrorResponse(int status, Location *location)
@@ -476,6 +499,7 @@ void	Response::makeAutoIndexResponse(std::string &path)
 	
 	this->makeStartLine();
 	this->makeRawResponse();
+	this->client->setStatus(RESPONSE_COMPLETE);
 }
 
 void		Response::generateErrorPage(int status)

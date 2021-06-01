@@ -314,42 +314,28 @@ bool	Webserver::run(struct timeval timeout)
 					// //std::cout << "try to response" << std::endl;
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
-						
 						//std::cout << "ready to response" << std::endl;
-						// if (client->getResponse().getHeaders()["Content-Length"] == "0")
-							//std::cout << "raw:" << client->getResponse().getRawResponse() << std::endl;
-						if (client->getResponse().getRawResponse().length() > BUFFER_SIZE)
+						// if (client->getResponse().getWriting() == false)
+						// 	client->getResponse().setWriting(true);
+						int res_idx = client->getResponse().getResIdx();
+
+						int write_size = write(i, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
+						client->getResponse().setResIdx(res_idx + write_size);
+						if (client->getResponse().getResIdx() >= client->getResponse().getRawResponse().length())
 						{
-							int write_size = write(i, client->getResponse().getRawResponse().c_str(), BUFFER_SIZE);
-							client->getResponse().getRawResponse().erase(0, write_size);
-							continue ;
-						}
-						else
-						{
-							int write_size = write(i, client->getResponse().getRawResponse().c_str(), client->getResponse().getRawResponse().length());
-							if (static_cast<size_t>(write_size) < client->getResponse().getRawResponse().length())
-							{
-								client->getResponse().getRawResponse().erase(0, write_size);
-								continue ;
-							}
-							// //std::cout << client->getResponse().getRawResponse() << std::endl;
-							//std::cout << "Content Length: " << client->getResponse().getHeaders()["Content-Length"] << std::endl;
-							client->getResponse().getRawResponse().clear();
 							client->getRequest().initRequest();
 							client->getResponse().initResponse();
 							client->setStatus(REQUEST_RECEIVING);
 						}
-						//std::cout << "finished response" << std::endl;
+						std::cout << "finished response" << std::endl;
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
-					// resource write
+					// resource write - PUT
 
-					// 일반 응답에 대한 resource일 경우 (PUT 또는 POST겠지)
-					// 정해진 데이터 write만
-					// fd_table delete 해야함
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
+
 					if (resource_fd->getData().length() > BUFFER_SIZE)
 					{
 						int write_size = write(i, resource_fd->getData().c_str(), BUFFER_SIZE);
@@ -437,10 +423,8 @@ bool	Webserver::run(struct timeval timeout)
 					client->getResponse().makeErrorResponse(500, NULL);
 					delete fd;
 					MANAGER->getFDTable().erase(i);
-					if (FT_FD_ISSET(i, &(MANAGER->getReads())))
-						FT_FD_CLR(i, &(MANAGER->getReads()));
-					if (FT_FD_ISSET(i, &(MANAGER->getWrites())))
-						FT_FD_CLR(i, &(MANAGER->getWrites()));
+					FT_FD_CLR(i, &(MANAGER->getReads()));
+					FT_FD_CLR(i, &(MANAGER->getWrites()));
 					FT_FD_CLR(i, &(MANAGER->getErrors()));
 					close(i);
 					{

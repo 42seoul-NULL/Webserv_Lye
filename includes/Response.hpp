@@ -24,6 +24,8 @@ class Response
 		bool	seek_flag;
 		std::string cgi_raw;
 		unsigned long long file_size;
+		size_t res_idx;
+		bool is_writing;
 
 	public:
 		Response();
@@ -35,9 +37,12 @@ class Response
 		std::string &getRawResponse(void);
 		Client *getClient();
 		std::string &getBody(void);
+		size_t getResIdx(void);
+		bool getWriting(void);
 
 		void setClient(Client *client);
-
+		void setResIdx(size_t res_idx);
+		void setWriting(bool is_writing);
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
 		void	tryMakePutResponse(Request &request);
 		void	applyCGIResponse(std::string& raw);
