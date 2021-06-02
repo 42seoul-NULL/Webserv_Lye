@@ -97,7 +97,7 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
 
-	//std::cout << "\033[32m server connection called \033[0m" << std::endl;	
+	std::cout << "\033[32m server connection called \033[0m" << std::endl;	
 	int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_size);
 	fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
@@ -109,19 +109,18 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	this->clients[client_socket].setLastRequestMs(ft_get_time());
 	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
+
 	//fd_table 세팅
 	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
 	MANAGER->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
 
-	//std::cout << "connected client : " << client_socket << std::endl;
+	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
 }
 
 bool Server::isCgiRequest(Location &location, Request &request)
 {
 	std::vector<std::string> &cgi_extensions = location.getCgiExtensions();
-	// uri에서 cgi extension 파싱하여 location의 그것과 매칭되는지 확인
-	// 매칭되면 cgi 처리, 아니면 일단 response 만들러 ㄱㄱ
 
 	size_t dot_pos = request.getUri().find('.');
 	if (dot_pos == std::string::npos)
@@ -133,12 +132,11 @@ bool Server::isCgiRequest(Location &location, Request &request)
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
 	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
 		return (false);
-
-	// //std::cout << "cgi body: " << request.getRawBody() << std::endl;
-
+	
 	while (request.getUri()[dot_pos] != '/')
 		dot_pos--;
 	res = request.getUri().substr(dot_pos + 1, ext_end - dot_pos - 1);
+
 
 	CGI	cgi;
 	cgi.testCGICall(request, location, res);
@@ -168,25 +166,10 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 {
 	char auth_key[200];
 
+	memset(auth_key, 0, 200);
 	std::size_t found = client.getRequest().getHeaders()["Authorization"].find(' ');
 	MANAGER->decode_base64(client.getRequest().getHeaders()["Authorization"].substr(found + 1).c_str(), auth_key, client.getRequest().getHeaders()["Authorization"].length());
-
 	if (std::string(auth_key) != location.getAuthKey())
 		return (false);
 	return (true);
 }
-
-//for test
-void		Server::show()
-{
-	//std::cout << "ip	:	" << this->ip << std::endl;
-	//std::cout << "port	:	" << this->port << std::endl;
-	//std::cout << "server_name	:	" << this->server_name << std::endl;
-	//std::cout << "============= location start =============" << std::endl;
-	for (std::map<std::string, Location>::iterator iter = locations.begin(); iter != locations.end(); iter++)
-	{
-		//std::cout << "=== Location Key : " << iter->first << " ===" << std::endl;
-		iter->second.show();
-	}
-	//std::cout << "============= location end ===============" << std::endl;
-}	

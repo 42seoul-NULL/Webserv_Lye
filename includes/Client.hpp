@@ -26,8 +26,6 @@ class Client
 		Client();
 		Client(int server_socket_fd, int socket_fd);
 		~Client();
-		// Client(const Location &src);
-		// Client& operator=(const Location &src);
 
 		void		setSocketFd(int socket_fd);
 		void		setServerSocketFd(int server_socket_fd);

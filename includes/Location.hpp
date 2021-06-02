@@ -55,8 +55,6 @@ class Location
 
 		std::string		checkAutoIndex(std::string &uri);
 
-		//for test//
-		void	show();
 };
 
 #endif

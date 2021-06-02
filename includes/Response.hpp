@@ -5,7 +5,7 @@
 # include <map>
 # include <vector>
 
-# define DEFAULT_STATUS 0 // 0으로 하면 되려나?
+# define DEFAULT_STATUS 0
 
 class Request;
 class Location;
@@ -29,8 +29,6 @@ class Response
 
 	public:
 		Response();
-		//Response(const Response &src);
-		//Response& operator=(const Response &src);
 		virtual	~Response();
 
 		std::map<std::string, std::string>&	getHeaders(void);
@@ -63,8 +61,7 @@ class Response
 		void	makeRedirectResponse(Location &location);
 		void	makeStartLine();
 		void	makeErrorResponse(int status, Location *location);
-		void	makeAutoIndexResponse(std::string &path);
-		// void	makeCGIStartLine();
+		void	makeAutoIndexResponse(std::string &path, const std::string &uri);
 		
 		void	makeRawResponse(void);
 		void	initResponse(void);

@@ -2,19 +2,15 @@
 #include "Manager.hpp"
 #include "Type.hpp"
 
-int	main(int ac, char **av)
+int	main(int argc, char **argv)
 {
-	ac = 0;
+	(void)argc;
 
-	if(!MANAGER->parseConfig(av[1]))
-		return (1);
-	MANAGER->show();
-
+	if (MANAGER->parseConfig(argv[1]) == 0)
+		return (EXIT_FAILURE);
 	struct timeval timeout;
-
-	timeout.tv_sec = 5; // last request time out 5000ms
+	timeout.tv_sec = 5;
 	timeout.tv_usec = 0;
-
 	try
 	{
 		MANAGER->getWebserver().initServers(200);
@@ -24,4 +20,5 @@ int	main(int ac, char **av)
 	{
 		std::cerr << e << '\n';
 	}
+	return (EXIT_SUCCESS);
 }

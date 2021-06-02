@@ -49,55 +49,47 @@ void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	FT_FD_CLR(client_socket_fd, &(MANAGER->getReads()));
-	FT_FD_CLR(client_socket_fd, &(MANAGER->getWrites()));
-	FT_FD_CLR(client_socket_fd, &(MANAGER->getErrors()));
-	close(client_socket_fd);
-	
 	Server *server = client.getServer();
 	Client *client_pointer = &client;
 	server->getClients().erase(client_socket_fd);
 
-
 	ResourceFD *resource_fdtype = NULL;
 	PipeFD *pipe_fdtype = NULL;
+	std::map<int, FDType*>::iterator temp;
 	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); )
 	{
 		if ((resource_fdtype = dynamic_cast<ResourceFD *>(iter->second)))
 		{
 			if (resource_fdtype->to_client == client_pointer)
 			{
-				FT_FD_CLR(iter->first, &(MANAGER->getReads()));
-				FT_FD_CLR(iter->first, &(MANAGER->getWrites()));
-				FT_FD_CLR(iter->first, &(MANAGER->getErrors()));
+				clrFDonTable(iter->first, FD_RDWR);
+				close(iter->first);
 				delete resource_fdtype;
+				temp = iter;
+				temp++;
 				MANAGER->getFDTable().erase(iter->first);
+				iter = temp;
+				continue;
 			}
-			else
-				iter++;
 		}
 		else if ((pipe_fdtype = dynamic_cast<PipeFD *>(iter->second)))
 		{
 			if (pipe_fdtype->to_client == client_pointer)
 			{
-				FT_FD_CLR(iter->first, &(MANAGER->getReads()));
-				FT_FD_CLR(iter->first, &(MANAGER->getWrites()));
-				FT_FD_CLR(iter->first, &(MANAGER->getErrors()));
+				clrFDonTable(iter->first, FD_RDWR);
+				close(iter->first);
 				delete pipe_fdtype;
+				temp = iter;
+				temp++;
 				MANAGER->getFDTable().erase(iter->first);
+				iter = temp;
+				continue;
 			}
-			else
-				iter++;
 		}
-		else
-			iter++;
+		iter++;
 	}
 
-	delete MANAGER->getFDTable()[client_socket_fd];
-	MANAGER->getFDTable()[client_socket_fd] = NULL;
-	MANAGER->getFDTable().erase(client_socket_fd);
-
-	return ;
+	MANAGER->deleteFromFDTable(client_socket_fd, MANAGER->getFDTable()[client_socket_fd], FD_RDWR);
 }
 
 bool	Webserver::initServers(int queue_size)
@@ -111,11 +103,6 @@ bool	Webserver::initServers(int queue_size)
 		struct sockaddr_in  server_addr;
 
 		iter->second.setSocketFd(socket(PF_INET, SOCK_STREAM, 0));
-
-		// FDTable에 insert
-		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
-		MANAGER->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fdtype));
-		
 		int option = 1;
 		setsockopt(iter->second.getSocketFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
@@ -132,19 +119,14 @@ bool	Webserver::initServers(int queue_size)
 		if (listen(iter->second.getSocketFd(), queue_size) == -1)
 			throw strerror(errno);
 
-		//std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
-
-		// 서버소켓은 read 와 error 만 검사.
-		FT_FD_SET(iter->second.getSocketFd(), &(MANAGER->getReads()));
-		FT_FD_SET(iter->second.getSocketFd(), &(MANAGER->getErrors()));
-		if (MANAGER->getWebserver().getFDMax() < iter->second.getSocketFd())
-		{
-			MANAGER->getWebserver().setFDMax(iter->second.getSocketFd());
-		}
-
-		
+		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 		this->servers[iter->second.getSocketFd()] = iter->second;
 
+		// FDTable에 insert
+		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
+		MANAGER->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fdtype));
+		// 서버소켓은 read 와 error 만 검사.
+		setFDonTable(iter->second.getSocketFd(), FD_RDONLY);
 		if (this->fd_max < iter->second.getSocketFd())
 			this->fd_max = iter->second.getSocketFd();
 	}
@@ -156,28 +138,20 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	size_t pos;
 	std::string uri_loc = "";
 
-	//std::cout <<"uri: [" << uri << "] uri print in Webserver.cpp 159line" << std::endl;
-
 	pos = uri.find('.');
 	if (pos != std::string::npos)
 	{
-		// 	. 이 있으니까 거기까지 자르면됨
 		while (uri[pos] != '/')
 			pos--;
-		uri_loc = uri.substr(0, pos + 1); // 맨뒤에 / 붙여줄꺼면 +1 하고 아니면 안하고 어떻게할까숑 
+		uri_loc = uri.substr(0, pos + 1);
 	}
 	else
 	{
 		pos = uri.find('?');
 		if (pos != std::string::npos)
-		{	
-			// ? 있으니까 딱 거기까지 잘라버리면 될듯
 			uri_loc = uri.substr(0, pos);
-		}
 		else
-		{
 			uri_loc = uri;
-		}
 	}
 	if (uri_loc[uri_loc.length() - 1] != '/')
 		uri_loc += "/";
@@ -186,26 +160,15 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	Location *ret = &loc_map["/"];
 
 	std::string key = "";
-	//std::cout << "[" << uri_loc << "] uri_loc print in Webserver.cpp in 189 line" << std::endl;
-	// //std::cout << ret.getLocationName() << std::endl;
-	// for (std::map<std::string, Location>::iterator iter = loc_map.begin(); iter != loc_map.end(); iter++)
-	// {
-	// 	//std::cout << iter->second.getLocationName() << std::endl;
-	// 	//std::cout << iter->second.getRoot() << std::endl;
-	// }
 	for (std::string::const_iterator iter = uri_loc.begin(); iter != uri_loc.end(); iter++)
 	{
 		key += *iter;
 		if (*iter == '/')
 		{
 			if (loc_map.find(key) == loc_map.end())
-			{
 				return (*ret);
-			}
 			else
-			{
 				ret = &loc_map[key];
-			}
 		}
 	}
 	return (*ret);
@@ -222,7 +185,6 @@ bool	Webserver::run(struct timeval timeout)
 	while (1)
 	{
 		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
-		// //std::cout << "check select" << std::endl;
 
 		cpy_reads = MANAGER->getReads();
 		cpy_writes = MANAGER->getWrites();
@@ -246,42 +208,30 @@ bool	Webserver::run(struct timeval timeout)
 				if (fd->getType() == SERVER_FDTYPE)
 				{
 					int client_socket_fd = this->servers[i].acceptClient(i, this->fd_max);
-					FT_FD_SET(client_socket_fd, &(MANAGER->getReads()));
-					FT_FD_SET(client_socket_fd, &(MANAGER->getWrites()));
-					FT_FD_SET(client_socket_fd, &(MANAGER->getErrors()));
+					setFDonTable(client_socket_fd, FD_RDWR);
 					if (this->fd_max < client_socket_fd)
-					{
 						this->fd_max = client_socket_fd;
-					}
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
 					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 
-					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
-
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
 						disconnect_client(*client);
-						//std::cout << "disconnected: " << i << std::endl;
+						std::cout << "disconnected: " << i << std::endl;
 						continue ;
 					}
 					if (client->getStatus() == REQUEST_COMPLETE)
-					{
 						this->prepareResponse(*client);
-						
-					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
 				{
-					// //std::cout << "try to read resource" << std::endl;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
 				}
 				else if (fd->getType() == ERROR_RESOURCE_FDTYPE)
 				{
-					//std::cout << "try to read error resource" << std::endl;
-
 					char buf[BUFFER_SIZE + 1];
 					int read_size;
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
@@ -295,10 +245,7 @@ bool	Webserver::run(struct timeval timeout)
 						resource_fd->to_client->getResponse().makeStartLine();
 						resource_fd->to_client->getResponse().makeRawResponse();
 						resource_fd->to_client->setStatus(RESPONSE_COMPLETE);
-						delete fd;
-						MANAGER->getFDTable().erase(i);
-						FT_FD_CLR(i, &(MANAGER->getReads()));
-						FT_FD_CLR(i, &(MANAGER->getErrors()));
+						MANAGER->deleteFromFDTable(i, fd, FD_RDONLY);
 					}
 				}
 			}
@@ -306,17 +253,12 @@ bool	Webserver::run(struct timeval timeout)
 			{
 				if (fd->getType() == CLIENT_FDTYPE)
 				{
-					// //std::cout << "select: client write" << std::endl;
-					//if  (ft_get_time() - ) // 타임아웃 체크 필요 // 그냥 하지 말자...
-					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
-					// //std::cout << "try to response" << std::endl;
+					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
+
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
-						//std::cout << "ready to response" << std::endl;
-						// if (client->getResponse().getWriting() == false)
-						// 	client->getResponse().setWriting(true);
 						int res_idx = client->getResponse().getResIdx();
 
 						int write_size = write(i, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
@@ -327,13 +269,11 @@ bool	Webserver::run(struct timeval timeout)
 							client->getResponse().initResponse();
 							client->setStatus(REQUEST_RECEIVING);
 						}
-						std::cout << "finished response" << std::endl;
 					}
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					// resource write - PUT
-
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 
 					if (resource_fd->getData().length() > BUFFER_SIZE)
@@ -344,7 +284,6 @@ bool	Webserver::run(struct timeval timeout)
 					}
 					else
 					{
-						// //std::cout << "data: " << resource_fd->getData() << std::endl;
 						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
 						if (static_cast<size_t>(write_size) < resource_fd->getData().length())
 						{
@@ -353,50 +292,33 @@ bool	Webserver::run(struct timeval timeout)
 						}
 
 						resource_fd->getData().clear();
-						//std::cout << "resource writing end" << std::endl;
 						resource_fd->to_client->getResponse().tryMakePutResponse(resource_fd->to_client->getRequest());
-						delete fd;
-						MANAGER->getFDTable()[i] = NULL;
-						MANAGER->getFDTable().erase(i);
-						FT_FD_CLR(i, &(MANAGER->getWrites()));
-						FT_FD_CLR(i, &(MANAGER->getErrors()));
-						close(i);
-						{
-							//std::cout << "******************** resource fd close : " << fd << std::endl;
-						}
+						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
-
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
 
-					if (pipefd->getData().length() > BUFFER_SIZE)
+					int write_idx = pipefd->getWriteIdx();
+
+					if (pipefd->getData().length() - write_idx > BUFFER_SIZE)
 					{
-						int write_size = write(i, pipefd->getData().c_str(), BUFFER_SIZE);
-						pipefd->getData().erase(0, write_size);
+						int write_size = write(i, pipefd->getData().c_str() + write_idx, BUFFER_SIZE);
+						pipefd->setWriteIdx(write_idx + write_size);
 						continue ;
 					}
 					else
 					{
-						int write_size = write(i, pipefd->getData().c_str(), pipefd->getData().length());
-						if (static_cast<size_t>(write_size) < pipefd->getData().length())
+						int write_size = write(i, pipefd->getData().c_str() + write_idx, pipefd->getData().length() - write_idx);
+						if (static_cast<size_t>(write_size) < pipefd->getData().length() - write_idx)
 						{
-							pipefd->getData().erase(0, write_size);
+							pipefd->setWriteIdx(write_idx + write_size);
 							continue ;
 						}
-						pipefd->getData().clear();
-
-						//std::cout << "write cgi pipe end" << std::endl;
 						close(pipefd->fd_read);
-						close(i);
-						delete fd;
-						MANAGER->getFDTable()[i] = NULL;
-						MANAGER->getFDTable().erase(i);
-						FT_FD_CLR(i, &(MANAGER->getWrites()));
-						FT_FD_CLR(i, &(MANAGER->getErrors()));
-
+						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
 			}
@@ -409,7 +331,6 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
-					//std::cout << "jayun error\n";
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
 					disconnect_client(*(client_fd->to_client));
 					std::cerr << "client error!" << std::endl;
@@ -417,32 +338,19 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
-					//std::cout << "resource error!" << std::endl;
+					std::cerr << "resource error!" << std::endl;
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
 
 					client->getResponse().makeErrorResponse(500, NULL);
-					delete fd;
-					MANAGER->getFDTable().erase(i);
-					FT_FD_CLR(i, &(MANAGER->getReads()));
-					FT_FD_CLR(i, &(MANAGER->getWrites()));
-					FT_FD_CLR(i, &(MANAGER->getErrors()));
-					close(i);
-					{
-						//std::cout << "******************** resource fd close : " << fd << std::endl;
-					}
+					MANAGER->deleteFromFDTable(i, fd, FD_RDWR);
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
-					//std::cout << "cgi pipe error!" << std::endl;
-
 					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
+					std::cerr << "pipe error!" << std::endl;
 
 					client->getResponse().makeErrorResponse(500, NULL);
-					delete fd;
-					MANAGER->getFDTable().erase(i);
-					FT_FD_CLR(i, &(MANAGER->getWrites()));
-					FT_FD_CLR(i, &(MANAGER->getErrors()));
-					close(i);
+					MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 				}
 			}
 		}
@@ -454,13 +362,11 @@ int Webserver::prepareResponse(Client &client)
 {
 	Location &location = this->getPerfectLocation( *client.getServer(), client.getRequest().getUri() );
 
-	//std::cout << "location:" << location.getLocationName() << std::endl;
 	// auth 체크 - 401
 	if (location.getAuthKey() != ""
-		&& (client.getRequest().getHeaders().count("Authorization") == 0 // decode 필요
+		&& (client.getRequest().getHeaders().count("Authorization") == 0
 		|| !client.getServer()->isCorrectAuth(location, client)))
 	{
-		//std::cout << "auth failed" << std::endl;
 		client.getResponse().makeErrorResponse(401, &location);
 		return (401);
 	}
@@ -468,17 +374,13 @@ int Webserver::prepareResponse(Client &client)
 	// Allowed Method인지 체크 - 405
 	if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
 	{
-		//std::cout << "method not allowed" << std::endl;
 		client.getResponse().makeErrorResponse(405, &location);
 		return (405);
 	}
 	
 	// client_max_body_size 체크
-	//std::cout << "body size:[" << client.getRequest().getRawBody().length() << "]" << std::endl;
-	//std::cout << "max body size:[" << location.getRequestMaxBodySize() << "]" << std::endl;
 	if (client.getRequest().getRawBody().length() > static_cast<size_t>(location.getRequestMaxBodySize()))
 	{
-		//std::cout << "over max body size" << std::endl;
 		client.getResponse().makeErrorResponse(413, &location);
 		return (413);
 	}
@@ -486,34 +388,23 @@ int Webserver::prepareResponse(Client &client)
 	//리다이렉션 체크
 	if (location.getRedirectReturn() != -1)
 	{
-		//std::cout << "redirection response" << std::endl;
 		client.getResponse().makeRedirectResponse(location);
 		return (REDIRECT_RESPONSE);
 	}
 
 	// response
 	if (client.getServer()->isCgiRequest(location, client.getRequest()))
-	{
-		//std::cout << "cgi response" << std::endl;
 		return (CGI_RESPONSE);
-	}
 	else
-	{
 		return (this->prepareGeneralResponse(client, location));
-	}
 }
 
 int Webserver::prepareGeneralResponse(Client &client, Location &location)
 {
-	//std::cout << "general response" << std::endl;
-
 	std::string uri = client.getRequest().getUri().substr(0, client.getRequest().getUri().find('?'));
 
-	
 	if (client.getRequest().getMethod() == "GET" || client.getRequest().getMethod() == "HEAD" || client.getRequest().getMethod() == "POST")
 	{
-		//std::cout << "GET or HEAD or POST" << std::endl;
-
 		if (uri[uri.length() - 1] != '/')
 			uri += '/';
 		
@@ -523,23 +414,19 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		else
 			path = location.getRoot() + uri.substr(location.getLocationName().length());
 
-		//std::cout << "path:[" << path << "]" << std::endl;
 		struct stat sb;
 		if (stat(path.c_str(), &sb) == -1)
 		{
 			path.erase(--(path.end())); // '/' 떼보고 stat 해봐서
 			if (stat(path.c_str(), &sb) == -1) // 없으면 404
 			{
-				//std::cout << "file not found - 404" << std::endl;
 				client.getResponse().makeErrorResponse(404, &location);
 				return (404);		
 			}
 		} // if 안들어가면 디렉토리
 
-		
 		if (path[path.length() - 1] == '/') // 디렉토리
 		{
-			//std::cout << "check autoindex" << std::endl;
 			std::string res = location.checkAutoIndex(path);
 			if (res == "404")
 			{
@@ -548,30 +435,24 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			}
 			else if (res == "Index of") //autoindex list up
 			{
-				client.getResponse().makeAutoIndexResponse(path);
+				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri());
 				return (AUTOINDEX_RESPONSE) ;
 			}
 			else
 				path = res;
-		} // 파일은 무조건 존재함
+		} // 파일은 무조건 존재
 
 		client.getRequest().setPath(path);
 		
-		//std::cout << "open GET - requested file" << std::endl;
 		int get_fd = open(path.c_str(), O_RDONLY);
-		//std::cout << "resource fd :" << get_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(get_fd, file_fd));
-		FT_FD_SET(get_fd, &(MANAGER->getReads()));
-		FT_FD_SET(get_fd, &(MANAGER->getErrors()));
+		setFDonTable(get_fd, FD_RDONLY);
 		if (this->fd_max < get_fd)
-		{
 			this->fd_max = get_fd;
-		}
 	}
 	else if (client.getRequest().getMethod() == "PUT")
 	{
-		
 		bool is_no_slash = false;
 		if (uri[uri.length() - 1] != '/')
 		{
@@ -586,33 +467,23 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			path = location.getRoot() + uri.substr(location.getLocationName().length());
 
 		if (is_no_slash == true)
-		{
 			path.erase(--(path.end()));
-		}
 		struct stat sb;
 		stat(path.c_str(), &sb);
 
 		if (path[path.length() - 1] == '/' || S_ISDIR(sb.st_mode))
 		{
-			//std::cout << "put to directory" << std::endl;
-			//std::cout << path << std::endl;
 			client.getResponse().makeErrorResponse(400, &location);
 			return (400);
 		}
-
-		//std::cout << "path: " << path << std::endl;
 		client.getRequest().setPath(path);
 		int put_fd = client.getServer()->createFileWithDirectory(path);
-		//std::cout << "resource fd :" << put_fd << std::endl;
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		file_fd->setData(const_cast<std::string &>(client.getRequest().getRawBody()));
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));
-		FT_FD_SET(put_fd, &(MANAGER->getWrites()));
-		FT_FD_SET(put_fd, &(MANAGER->getErrors()));
+		setFDonTable(put_fd, FD_WRONLY);
 		if (this->fd_max < put_fd)
-		{
 			this->fd_max = put_fd;
-		}
 	}
 	return (GENERAL_RESPONSE);
 }

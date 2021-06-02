@@ -152,29 +152,6 @@ void	Location::setLocationName(std::string &location_name)
 	this->location_name = location_name;
 }
 
-//for test
-void	Location::show()
-{
-	//std::cout << "root	:	" << this->root << std::endl;
-	//std::cout << "rqmbs	:	" << this->request_max_body_size << std::endl;
-	//std::cout << "upload_path	:	" << this->upload_path << std::endl;
-	//std::cout << "auto_index	:	" << this->auto_index << std::endl;
-	// for (std::vector<std::string>::iterator iter = this->cgi_extensions.begin(); iter != this->cgi_extensions.end(); iter++)
-		//std::cout << "cgi_extension	:	" << *iter << std::endl;
-	//std::cout << "auth_key	:	" << this->auth_key << std::endl;
-	//std::cout << "index	: ";
-	// for (std::list<std::string>::iterator iter = this->index.begin(); iter != this->index.end(); iter++)
-		//std::cout << *iter << " ";
-	//std::cout << std::endl;
-	//std::cout << "allow_methods	: ";
-	// for (std::list<std::string>::iterator iter = this->allow_methods.begin(); iter != this->allow_methods.end(); iter++)
-		//std::cout << *iter << " ";
-	//std::cout << std::endl;
-	//std::cout << "error_pages	: " << std::endl;
-	// for (std::map<int, std::string>::iterator iter = this->error_pages.begin(); iter != this->error_pages.end(); iter++)
-		//std::cout << iter->first << " | " << iter->second << std::endl;
-}
-
 std::string	Location::checkAutoIndex(std::string &uri)
 {
 	std::string temp = uri;
@@ -185,7 +162,6 @@ std::string	Location::checkAutoIndex(std::string &uri)
 	{
 		temp = uri;
 		temp += *iter;
-		//std::cout << temp << std::endl;
 		if (stat(temp.c_str(), &sb) == 0)
 		{
 			found = true;

@@ -122,7 +122,6 @@ void	Request::setPath(std::string &path)
 
 void	Request::initRequest(void)
 {
-	// this->raw_request.clear();
 	this->method.clear();
 	this->uri.clear();
 	this->http_version.clear();
@@ -145,7 +144,6 @@ bool	Request::tryMakeRequest(void)
 		this->makeRequestHeader();
 		this->status = PARSING_BODY;
 		int	res = bodyCheck();
-		// exit(0);
 		if (res == NOBODY)
 		{
 			this->temp_body.clear();
@@ -165,7 +163,6 @@ bool	Request::tryMakeRequest(void)
 
 void	Request::makeStartLine(void)
 {
-	// //std::cout <<"|" << this->raw_request  << "|" << std::endl;
 	std::size_t	found = this->raw_request.find("\r\n");
 	std::string start_line = this->raw_request.substr(0, found);
 
@@ -209,20 +206,13 @@ void	Request::makeRequestHeader(void)
 		std::string temp = *i;
 		std::size_t found = temp.find(":");
 		std::string key = temp.substr(0, found);
-		while (found + 1 < temp.length() && temp[found + 1] == 32) // space 건너뛰기
+		while (found + 1 < temp.length() && temp[found + 1] == 32)
 			found++;
 		std::string value = "";
 		if (temp.length() > (found + 1))
 			value = temp.substr(found + 1);
 		headers[key] = value;
 	}
-
-	// 맵 출력용
-	//std::cout << "@@@@ headers size = " <<  headers.size() << std::endl;
-	// for (std::map<std::string, std::string>::iterator j = headers.begin(); j != headers.end(); j++)
-		//std::cout << "[" << j->first << "] value = [" << j->second << "]" << std::endl;
-
-	//std::cout << "cout in request.cpp 225 line finish\n\n";
 
 	size_t pos = this->raw_request.find("\r\n\r\n");
 	if (this->raw_request.length() > pos + 4)
@@ -277,7 +267,6 @@ bool	Request::isComplete(void)
 				this->status = PARSING_HEADER;
 				return (true);
 			}
-			//this->temp_body = this->temp_body.substr(found + 2);
 			std::string cut = this->temp_body.substr(found + 2); //숫자 뒤 \r\n 다음부터 자름(데이터 보기 위해)
 			if (cut.length() >= chunk_size + 2)
 			{
