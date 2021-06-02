@@ -13,7 +13,7 @@ int	main(int argc, char **argv)
 	timeout.tv_usec = 0;
 	try
 	{
-		MANAGER->getWebserver().initServers(200);
+		MANAGER->getWebserver().initServers(256);
 		MANAGER->getWebserver().run(timeout);
 	}
 	catch(const char *e)
