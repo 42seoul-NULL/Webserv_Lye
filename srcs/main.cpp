@@ -13,6 +13,8 @@ int	main(int argc, char **argv)
 	timeout.tv_usec = 0;
 	try
 	{
+		signal(SIGINT, deleteServerResoureces);
+		signal(SIGKILL, deleteServerResoureces);
 		MANAGER->getWebserver().initServers(256);
 		MANAGER->getWebserver().run(timeout);
 	}

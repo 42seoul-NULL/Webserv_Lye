@@ -532,3 +532,17 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 	}
 	return (GENERAL_RESPONSE);
 }
+
+void deleteServerResoureces(int signo)
+{
+	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); iter++)
+	{
+		close(iter->first);
+		delete iter->second;
+	}
+	if (signo == SIGINT)
+		std::cout << "\n[webserv: Interrupt]" << std::endl;
+	if (signo == SIGKILL)
+		std::cout << "\n[webserv: Killed]" << std::endl;
+	exit(signo);
+}

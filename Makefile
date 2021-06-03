@@ -25,7 +25,7 @@ CC			=		clang++
 CF			=		-Wall -Wextra -Werror -std=c++98 ${INC} ${SRCS}
 DCF			=		-g ${SRCS}
 
-${NAME}     :
+${NAME}     :		$(SRCS)
 					make all -C "./libft_cpp"
 					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
 					${CC} ${CF} ${LIB_NAME} -o ${NAME} 

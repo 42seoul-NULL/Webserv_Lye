@@ -44,4 +44,6 @@ class Webserver
 		int 		prepareGeneralResponse(Client &client, Location &location);
 };
 
+void deleteServerResoureces(int signo);
+
 #endif
