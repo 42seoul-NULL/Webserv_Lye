@@ -70,7 +70,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	if (resource_fd->getType() == CGI_RESOURCE_FDTYPE)
 	{
 		int status;
-		if (waitpid(resource_fd->pid, &status, WNOHANG) == 0) // CGI Process 안끝남
+		if (waitpid(resource_fd->getPid(), &status, WNOHANG) == 0) // CGI Process 안끝남
 			return ;
 		if (this->seek_flag == false)
 		{
@@ -85,6 +85,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL);
+			MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
 			return ;
 		}
 

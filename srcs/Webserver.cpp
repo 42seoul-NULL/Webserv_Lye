@@ -61,7 +61,7 @@ void	Webserver::disconnect_client(Client &client)
 	{
 		if ((resource_fdtype = dynamic_cast<ResourceFD *>(iter->second)))
 		{
-			if (resource_fdtype->to_client == client_pointer)
+			if (resource_fdtype->getClient() == client_pointer)
 			{
 				clrFDonTable(iter->first, FD_RDWR);
 				close(iter->first);
@@ -75,7 +75,7 @@ void	Webserver::disconnect_client(Client &client)
 		}
 		else if ((pipe_fdtype = dynamic_cast<PipeFD *>(iter->second)))
 		{
-			if (pipe_fdtype->to_client == client_pointer)
+			if (pipe_fdtype->getClient() == client_pointer)
 			{
 				clrFDonTable(iter->first, FD_RDWR);
 				close(iter->first);
@@ -215,7 +215,7 @@ bool	Webserver::run(struct timeval timeout)
 				}
 				else if (fd->getType() == CLIENT_FDTYPE)
 				{
-					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
+					Client *client = dynamic_cast<ClientFD *>(fd)->getClient();
 
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
@@ -229,7 +229,7 @@ bool	Webserver::run(struct timeval timeout)
 				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
 				{
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
-					resource_fd->to_client->getResponse().tryMakeResponse(resource_fd, i, resource_fd->to_client->getRequest());
+					resource_fd->getClient()->getResponse().tryMakeResponse(resource_fd, i, resource_fd->getClient()->getRequest());
 				}
 				else if (fd->getType() == ERROR_RESOURCE_FDTYPE)
 				{
@@ -244,13 +244,14 @@ bool	Webserver::run(struct timeval timeout)
 						continue ;
 					}
 					buf[read_size] = 0;
-					resource_fd->to_client->getResponse().getBody().append(buf);
+					Client *client = resource_fd->getClient();
+					client->getResponse().getBody().append(buf);
 					if (read_size < BUFFER_SIZE)
 					{
-						resource_fd->to_client->getResponse().getHeaders().insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(resource_fd->to_client->getResponse().getBody().length())));
-						resource_fd->to_client->getResponse().makeStartLine();
-						resource_fd->to_client->getResponse().makeRawResponse();
-						resource_fd->to_client->setStatus(RESPONSE_COMPLETE);
+						client->getResponse().getHeaders().insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(client->getResponse().getBody().length())));
+						client->getResponse().makeStartLine();
+						client->getResponse().makeRawResponse();
+						client->setStatus(RESPONSE_COMPLETE);
 						MANAGER->deleteFromFDTable(i, fd, FD_RDONLY);
 					}
 				}
@@ -261,7 +262,7 @@ bool	Webserver::run(struct timeval timeout)
 				{
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
-					Client *client = dynamic_cast<ClientFD *>(fd)->to_client;
+					Client *client = dynamic_cast<ClientFD *>(fd)->getClient();
 
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
@@ -296,7 +297,7 @@ bool	Webserver::run(struct timeval timeout)
 					resource_fd->setWriteIdx(write_idx + write_size);
 					if (resource_fd->getWriteIdx() >= resource_fd->getData().length())
 					{
-						resource_fd->to_client->getResponse().makePutResponse(resource_fd->to_client->getRequest());
+						resource_fd->getClient()->getResponse().makePutResponse(resource_fd->getClient()->getRequest());
 						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
@@ -331,7 +332,7 @@ bool	Webserver::run(struct timeval timeout)
 							pipefd->setWriteIdx(write_idx + write_size);
 							continue ;
 						}
-						close(pipefd->fd_read);
+						close(pipefd->getFdRead());
 						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
@@ -346,21 +347,21 @@ bool	Webserver::run(struct timeval timeout)
 				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
-					disconnect_client(*(client_fd->to_client));
+					disconnect_client(*(client_fd->getClient()));
 					std::cerr << "client error!" << std::endl;
 					close(i);
 				}
 				else if (fd->getType() == RESOURCE_FDTYPE)
 				{
 					std::cerr << "resource error!" << std::endl;
-					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
+					Client *client = dynamic_cast<ResourceFD*>(fd)->getClient();
 
 					client->getResponse().makeErrorResponse(500, NULL);
 					MANAGER->deleteFromFDTable(i, fd, FD_RDWR);
 				}
 				else if (fd->getType() == PIPE_FDTYPE)
 				{
-					Client *client = dynamic_cast<ResourceFD*>(fd)->to_client;
+					Client *client = dynamic_cast<ResourceFD*>(fd)->getClient();
 					std::cerr << "pipe error!" << std::endl;
 
 					client->getResponse().makeErrorResponse(500, NULL);

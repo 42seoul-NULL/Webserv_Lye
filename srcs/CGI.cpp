@@ -58,7 +58,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	{
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
-		pipe_fd->fd_read = request_fd[0];
+		pipe_fd->setFdRead(request_fd[0]);
 
 		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
 		setFDonTable(this->request_fd[1], FD_WRONLY); // pipe는 writes만
