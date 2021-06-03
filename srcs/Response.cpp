@@ -135,6 +135,8 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();
+		if (this->client->getRequest().getMethod() == "HEAD")
+			this->body.clear();
 		this->makeRawResponse();
 		request.getClient()->setStatus(RESPONSE_COMPLETE);
 	}
