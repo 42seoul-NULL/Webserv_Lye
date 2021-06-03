@@ -17,6 +17,16 @@ ResourceFD::ResourceFD(t_FDType type, Client *client)
 {
 	this->type = type;
 	this->to_client = client;
+	this->data = NULL;
+	this->write_idx = 0;
+}
+
+ResourceFD::ResourceFD(t_FDType type, Client *client, const std::string &data)
+{
+	this->type = type;
+	this->to_client = client;
+	this->write_idx = 0;
+	this->data = &data;
 }
 
 ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
@@ -24,16 +34,23 @@ ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
 	this->type = type;
 	this->pid = pid;
 	this->to_client = client;
+	this->data = NULL;
+	this->write_idx = 0;
 }
 
-std::string &ResourceFD::getData()
+const std::string &ResourceFD::getData()
 {
-	return (this->data);
+	return (*this->data);
 }
 
-void ResourceFD::setData(std::string &data)
+size_t ResourceFD::getWriteIdx()
 {
-	this->data = data;
+	return (this->write_idx);
+}
+
+void ResourceFD::setWriteIdx(size_t write_idx)
+{
+	this->write_idx = write_idx;
 }
 
 PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data) : data(data)

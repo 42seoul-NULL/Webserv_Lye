@@ -8,7 +8,7 @@
 # include <sys/time.h>
 # include <sys/select.h>
 # include <fcntl.h>
-# include "../libft_cpp/libft.hpp"
+# include "libft.hpp"
 
 class Request;
 class Location;
@@ -46,7 +46,8 @@ class Server
 		bool isCgiRequest(Location &location, Request &request);
 		int	createFileWithDirectory(std::string path);
 		bool isCorrectAuth(Location &location, Client &client);
-
+		bool isDirectoryName(const std::string &path);
+		int cleanUpLocationRoot(Client &client, const std::string &root);
 };
 
 #endif

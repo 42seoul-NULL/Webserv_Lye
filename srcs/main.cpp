@@ -1,4 +1,4 @@
-#include "../libft_cpp/libft.hpp"
+#include "libft.hpp"
 #include "Manager.hpp"
 #include "Type.hpp"
 

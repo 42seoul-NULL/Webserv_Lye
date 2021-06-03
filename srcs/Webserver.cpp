@@ -1,10 +1,11 @@
 #include "Manager.hpp"
 #include "Webserver.hpp"
-#include "../libft_cpp/libft.hpp"
+#include "libft.hpp"
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Location.hpp"
 #include "CGI.hpp"
+#include <dirent.h>
 
 #define GENERAL_RESPONSE 0
 #define CGI_RESPONSE 1
@@ -237,6 +238,11 @@ bool	Webserver::run(struct timeval timeout)
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 
 					read_size = read(i, buf, BUFFER_SIZE);
+					if (read_size == -1)
+					{
+						std::cerr << "temporary resource read error!" << std::endl;
+						continue ;
+					}
 					buf[read_size] = 0;
 					resource_fd->to_client->getResponse().getBody().append(buf);
 					if (read_size < BUFFER_SIZE)
@@ -259,9 +265,13 @@ bool	Webserver::run(struct timeval timeout)
 
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
-						int res_idx = client->getResponse().getResIdx();
-
+						size_t res_idx = client->getResponse().getResIdx();
 						int write_size = write(i, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
+						if (write_size == -1)
+						{
+							std::cerr << "temporary client write error!" << std::endl;
+							continue ;
+						}
 						client->getResponse().setResIdx(res_idx + write_size);
 						if (client->getResponse().getResIdx() >= client->getResponse().getRawResponse().length())
 						{
@@ -276,23 +286,17 @@ bool	Webserver::run(struct timeval timeout)
 					// resource write - PUT
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
 
-					if (resource_fd->getData().length() > BUFFER_SIZE)
+					size_t write_idx = resource_fd->getWriteIdx();
+					int write_size = write(i, resource_fd->getData().c_str() + write_idx, resource_fd->getData().length() - write_idx);
+					if (write_size == -1)
 					{
-						int write_size = write(i, resource_fd->getData().c_str(), BUFFER_SIZE);
-						resource_fd->getData().erase(0, write_size);
+						std::cerr << "temporary resource write error!" << std::endl;
 						continue ;
 					}
-					else
+					resource_fd->setWriteIdx(write_idx + write_size);
+					if (resource_fd->getWriteIdx() >= resource_fd->getData().length())
 					{
-						int write_size = write(i, resource_fd->getData().c_str(), resource_fd->getData().length());
-						if (static_cast<size_t>(write_size) < resource_fd->getData().length())
-						{
-							resource_fd->getData().erase(0, write_size);
-							continue ;
-						}
-
-						resource_fd->getData().clear();
-						resource_fd->to_client->getResponse().tryMakePutResponse(resource_fd->to_client->getRequest());
+						resource_fd->to_client->getResponse().makePutResponse(resource_fd->to_client->getRequest());
 						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
@@ -306,12 +310,22 @@ bool	Webserver::run(struct timeval timeout)
 					if (pipefd->getData().length() - write_idx > BUFFER_SIZE)
 					{
 						int write_size = write(i, pipefd->getData().c_str() + write_idx, BUFFER_SIZE);
+						if (write_size == -1)
+						{
+							std::cerr << "temporary client write error!" << std::endl;
+							continue ;
+						}
 						pipefd->setWriteIdx(write_idx + write_size);
 						continue ;
 					}
 					else
 					{
 						int write_size = write(i, pipefd->getData().c_str() + write_idx, pipefd->getData().length() - write_idx);
+						if (write_size == -1)
+						{
+							std::cerr << "temporary client write error!" << std::endl;
+							continue ;
+						}
 						if (static_cast<size_t>(write_size) < pipefd->getData().length() - write_idx)
 						{
 							pipefd->setWriteIdx(write_idx + write_size);
@@ -478,12 +492,42 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		}
 		client.getRequest().setPath(path);
 		int put_fd = client.getServer()->createFileWithDirectory(path);
-		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
-		file_fd->setData(const_cast<std::string &>(client.getRequest().getRawBody()));
+		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client, client.getRequest().getRawBody());
 		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));
 		setFDonTable(put_fd, FD_WRONLY);
 		if (this->fd_max < put_fd)
 			this->fd_max = put_fd;
+	}
+	else if (client.getRequest().getMethod() == "DELETE")
+	{
+		if (uri[uri.length() - 1] != '/')
+			uri += '/';
+		if (uri == location.getLocationName())
+		{
+			client.getRequest().setPath(location.getRoot());
+			client.getServer()->cleanUpLocationRoot(client, location.getRoot());
+			client.getResponse().makeDeleteResponse(client.getRequest());
+			return (GENERAL_RESPONSE);
+		}
+
+		std::string path = location.getRoot() + uri.substr(location.getLocationName().length());
+		if (client.getServer()->isDirectoryName(path))
+		{
+			client.getRequest().setPath(path);
+			path.erase(--(path.end()));
+			if (ft_remove_directory(path.c_str()) == 1)
+			{
+				client.getResponse().makeErrorResponse(500, NULL);
+				return (500);
+			}
+		}
+		else
+		{
+			path.erase(--(path.end()));
+			client.getRequest().setPath(path);
+			unlink(path.c_str());	
+		}
+		client.getResponse().makeDeleteResponse(client.getRequest());
 	}
 	return (GENERAL_RESPONSE);
 }

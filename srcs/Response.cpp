@@ -1,5 +1,5 @@
 #include "Response.hpp"
-#include "../libft_cpp/libft.hpp"
+#include "libft.hpp"
 #include "Request.hpp"
 #include "Type.hpp"
 #include "Client.hpp"
@@ -140,12 +140,25 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	}
 }
 
-void		Response::tryMakePutResponse(Request &request)
+void		Response::makePutResponse(Request &request)
 {
 	(void)request;
 	this->status = 201;
 	this->generateDate();
 	this->generateServer();
+	this->generateContentLength();
+	this->makeStartLine();
+	this->makeRawResponse();
+	this->client->setStatus(RESPONSE_COMPLETE);
+}
+
+void		Response::makeDeleteResponse(Request &request)
+{
+	this->status = 200;
+	this->generateDate();
+	this->generateServer();
+	this->generateContentLocation(request);
+	this->generateContentType(request);
 	this->generateContentLength();
 	this->makeStartLine();
 	this->makeRawResponse();
@@ -413,7 +426,7 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 		struct tm*	timeinfo;
 		char buffer[4096];
 		std::string name = std::string(file->d_name);
-		if (file->d_type == 4)
+		if (file->d_type == DT_DIR)
 			name += '/';
 		this->body += "<a href=\"" + name + "\">" + name + "</a>\r\n";
 

@@ -1,8 +1,11 @@
-#include "../includes/Server.hpp"
+#include "Server.hpp"
 #include "Manager.hpp"
 #include "Location.hpp"
 #include "Client.hpp"
 #include "CGI.hpp"
+#include "libft.hpp"
+#include <unistd.h>
+#include <dirent.h>
 
 Server::Server() : port(-1), socket_fd(-1)
 {
@@ -172,4 +175,47 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 	if (std::string(auth_key) != location.getAuthKey())
 		return (false);
 	return (true);
+}
+
+bool Server::isDirectoryName(const std::string &path)
+{
+	struct stat sb;
+	if (stat(path.c_str(), &sb) == -1)
+		return (false);
+	return (true);
+}
+
+int Server::cleanUpLocationRoot(Client &client, const std::string &root)
+{
+	std::string path = root;
+	DIR *dir_ptr;
+	struct dirent *file;
+	if ((dir_ptr = opendir(path.c_str())) == NULL)
+	{
+		std::cerr << "opendir() error!" << std::endl;
+		client.getResponse().makeErrorResponse(500, NULL);
+		return (500);
+	}
+	if (path[path.length() - 1] != '/')
+		path += '/';
+	std::string name;
+	int ret;
+	while ((file = readdir(dir_ptr)) != NULL)
+	{
+		name = std::string(file->d_name);
+		if (name == "." || name == "..")
+			continue ;
+		if (file->d_type == DT_DIR)
+		{
+			ret = ft_remove_directory(path + name);
+			if (ret == 1)
+			{
+				client.getResponse().makeErrorResponse(500, NULL);
+				return (500);
+			}
+		}
+		else
+			unlink((path + name).c_str());
+	}
+	return (200);
 }
