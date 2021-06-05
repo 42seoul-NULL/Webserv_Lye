@@ -112,7 +112,7 @@ void Request::setClient(Client *client)
 	this->client = client;
 }
 
-void	Request::setPath(std::string &path)
+void	Request::setPath(const std::string &path)
 {
 	this->path = path;
 }

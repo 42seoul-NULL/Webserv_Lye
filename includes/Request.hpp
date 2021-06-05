@@ -4,7 +4,7 @@
 # include <iostream>
 # include <vector>
 # include <map>
-# include "../libft_cpp/libft.hpp"
+# include "libft.hpp"
 
 # define CHUNKED 2
 # define CONTENT_LENGTH 1
@@ -53,7 +53,7 @@ class Request
 		std::string &getPath(void);
 
 		void setClient(Client *client);
-		void setPath(std::string &path);
+		void setPath(const std::string &path);
 		
 	public:
 		void	initRequest(void);

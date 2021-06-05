@@ -14,7 +14,7 @@ SRCDIR		=		./srcs/
 
 SRCS		=		${addprefix ${SRCDIR}, ${SRCNAME}}
 
-INC		=		-I ./includes/ -I /libft_cpp/
+INC		=		-I ./includes/ -I ./libft_cpp/
 
 NAME		=		webserv
 
@@ -25,10 +25,10 @@ CC			=		clang++
 CF			=		-Wall -Wextra -Werror -std=c++98 ${INC} ${SRCS}
 DCF			=		-g ${SRCS}
 
-${NAME}     :
+${NAME}     :		$(SRCS)
 					make all -C "./libft_cpp"
 					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
-					${CC} ${CF} ${LIB_NAME} ${INC} -o ${NAME} 
+					${CC} ${CF} ${LIB_NAME} -o ${NAME} 
 
 dbg		:
 					${CC} ${DCF} ${LIB_NAME} -o ${NAME}

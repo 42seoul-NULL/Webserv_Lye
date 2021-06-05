@@ -50,24 +50,36 @@ class ServerFD : public FDType
 
 class ClientFD : public FDType
 {
-	public :
+	private:
+		Client *client;
+
+	public:
 		ClientFD(t_FDType type, Client *client);
-		Client *to_client;
 		~ClientFD() {}
+		
+		Client *getClient(void);
 };
 
 class ResourceFD : public FDType
 {
 	private:
-		std::string data;
+		const std::string *data;
+		size_t write_idx;
+		pid_t pid;
+		Client *client;
+
 	public :
 		ResourceFD(t_FDType type, pid_t pid, Client *client);
 		ResourceFD(t_FDType type, Client *client);
-		pid_t pid;
-		Client *to_client;
-		std::string &getData();
-		void setData(std::string &data);
+		ResourceFD(t_FDType type, Client *client, const std::string &data);
 		~ResourceFD() {}
+
+		Client *getClient(void);
+		pid_t getPid(void);
+		const std::string &getData(void);
+		size_t getWriteIdx(void);
+
+		void setWriteIdx(size_t write_idx);
 };
 
 class PipeFD : public FDType
@@ -75,17 +87,22 @@ class PipeFD : public FDType
 	private:
 		const std::string &data;
 		int write_idx;
-	public:
-		PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data);
 		pid_t pid;
-		Client *to_client;
+		Client *client;
 		int fd_read;
 
+	public:
+		PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data);
+		~PipeFD() {}
+		
+		Client *getClient(void);
+		pid_t getPid(void);
+		int getFdRead(void);
 		const std::string &getData();
 		int getWriteIdx();
 
 		void setWriteIdx(int write_idx);
-		~PipeFD() {}
+		void setFdRead(int fd);
 };
 
 void setFDonTable(int fd, t_fdset set);

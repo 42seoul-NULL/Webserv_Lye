@@ -33,7 +33,8 @@ FILES = ft_memset \
 		ft_ntohl \
 		ft_ntohs \
 		ft_get_time \
-		ft_atoi_hex
+		ft_atoi_hex \
+		ft_remove_directory
 
 SRCS_DIR = ./
 SRCS = $(addprefix $(SRCS_DIR), $(addsuffix .cpp, $(FILES)))

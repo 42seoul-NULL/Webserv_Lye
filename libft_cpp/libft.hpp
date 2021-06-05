@@ -43,5 +43,6 @@ uint16_t			ft_ntohs(uint16_t val);
 
 unsigned long		ft_get_time(void);
 int					ft_atoi_hex(const std::string &str);
+int 				ft_remove_directory(std::string dir);
 
 #endif

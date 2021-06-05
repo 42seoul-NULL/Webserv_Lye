@@ -1,4 +1,4 @@
-#include "../libft_cpp/libft.hpp"
+#include "libft.hpp"
 #include "Manager.hpp"
 #include "Type.hpp"
 
@@ -13,7 +13,9 @@ int	main(int argc, char **argv)
 	timeout.tv_usec = 0;
 	try
 	{
-		MANAGER->getWebserver().initServers(200);
+		signal(SIGINT, deleteServerResoureces);
+		signal(SIGKILL, deleteServerResoureces);
+		MANAGER->getWebserver().initServers(256);
 		MANAGER->getWebserver().run(timeout);
 	}
 	catch(const char *e)

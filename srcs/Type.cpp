@@ -2,6 +2,11 @@
 #include "Manager.hpp"
 #include "Type.hpp"
 
+int FDType::getType()
+{
+	return (this->type);
+}
+
 ServerFD::ServerFD(t_FDType type)
 {
 	this->type = type;
@@ -10,38 +15,86 @@ ServerFD::ServerFD(t_FDType type)
 ClientFD::ClientFD(t_FDType type, Client *client)
 {
 	this->type = type;
-	this->to_client = client;
+	this->client = client;
 }
+
+Client *ClientFD::getClient(void)
+{
+	return (this->client);
+}
+
 
 ResourceFD::ResourceFD(t_FDType type, Client *client)
 {
 	this->type = type;
-	this->to_client = client;
+	this->client = client;
+	this->data = NULL;
+	this->write_idx = 0;
+}
+
+ResourceFD::ResourceFD(t_FDType type, Client *client, const std::string &data)
+{
+	this->type = type;
+	this->client = client;
+	this->write_idx = 0;
+	this->data = &data;
 }
 
 ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
 {
 	this->type = type;
 	this->pid = pid;
-	this->to_client = client;
+	this->client = client;
+	this->data = NULL;
+	this->write_idx = 0;
 }
 
-std::string &ResourceFD::getData()
+Client *ResourceFD::getClient(void)
 {
-	return (this->data);
+	return (this->client);
 }
 
-void ResourceFD::setData(std::string &data)
+pid_t ResourceFD::getPid(void)
 {
-	this->data = data;
+	return (this->pid);
+}
+
+const std::string &ResourceFD::getData()
+{
+	return (*this->data);
+}
+
+size_t ResourceFD::getWriteIdx()
+{
+	return (this->write_idx);
+}
+
+void ResourceFD::setWriteIdx(size_t write_idx)
+{
+	this->write_idx = write_idx;
 }
 
 PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data) : data(data)
 {
 	this->type = type;
 	this->pid = pid;
-	this->to_client = client;
+	this->client = client;
 	this->write_idx = 0;
+}
+
+Client *PipeFD::getClient(void)
+{
+	return (this->client);
+}
+
+pid_t PipeFD::getPid(void)
+{
+	return (this->pid);
+}
+
+int PipeFD::getFdRead(void)
+{
+	return (this->fd_read);
 }
 
 const std::string &PipeFD::getData()
@@ -59,10 +112,13 @@ void PipeFD::setWriteIdx(int write_idx)
 	this->write_idx = write_idx;
 }
 
-int FDType::getType()
+void PipeFD::setFdRead(int fd)
 {
-	return (this->type);
+	this->fd_read = fd;
 }
+
+
+
 
 void setFDonTable(int fd, t_fdset set)
 {
