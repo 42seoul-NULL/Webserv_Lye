@@ -69,49 +69,24 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	
 	if (resource_fd->getType() == CGI_RESOURCE_FDTYPE)
 	{
-		int status;
-		if (waitpid(resource_fd->getPid(), &status, WNOHANG) == 0) // CGI Process 안끝남
-			return ;
-		if (this->seek_flag == false)
-		{
-			lseek(fd, 0, SEEK_SET);
-			this->seek_flag = true;
-			struct stat sb;
-			if (stat(std::string(".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), &sb) == -1)
-				std::cerr << "stat err!" << std::endl;
-			this->file_size = sb.st_size;
-		}
 		read_size = read(fd, buf, BUFFER_SIZE - 1);
 		if (read_size == -1)
 		{
-			this->makeErrorResponse(500, NULL);
-			MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
+			std::cerr << "temporary resource read error!" << std::endl;
 			return ;
 		}
-
-		if (this->file_size == (size_t)read_size)
+		else if (read_size == 0)
 		{
 			buf[read_size] = '\0';
-			this->cgi_raw += std::string(buf);
-			this->file_size = 0;
+			this->cgi_raw += buf;
 		}
 		else
 		{
-			this->file_size -= read_size;
-			if (this->file_size > 0)
-			{
-				buf[read_size] = '\0';
-				this->cgi_raw += std::string(buf);
-				return ;
-			}
-		}
-		MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
-		unlink(("./.res_" + ft_itoa(this->client->getSocketFd())).c_str());
-		if (read_size == -1)
-		{
-			this->makeErrorResponse(500, NULL); // 500 Error
+			buf[read_size] = '\0';
+			this->cgi_raw += buf;
 			return ;
 		}
+		MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
 		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();

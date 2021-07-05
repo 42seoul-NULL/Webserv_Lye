@@ -92,11 +92,6 @@ pid_t PipeFD::getPid(void)
 	return (this->pid);
 }
 
-int PipeFD::getFdRead(void)
-{
-	return (this->fd_read);
-}
-
 const std::string &PipeFD::getData()
 {
 	return (this->data);
@@ -110,11 +105,6 @@ int PipeFD::getWriteIdx()
 void PipeFD::setWriteIdx(int write_idx)
 {
 	this->write_idx = write_idx;
-}
-
-void PipeFD::setFdRead(int fd)
-{
-	this->fd_read = fd;
 }
 
 

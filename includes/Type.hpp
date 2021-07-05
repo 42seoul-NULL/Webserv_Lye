@@ -89,7 +89,6 @@ class PipeFD : public FDType
 		int write_idx;
 		pid_t pid;
 		Client *client;
-		int fd_read;
 
 	public:
 		PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data);
@@ -97,12 +96,10 @@ class PipeFD : public FDType
 		
 		Client *getClient(void);
 		pid_t getPid(void);
-		int getFdRead(void);
 		const std::string &getData();
 		int getWriteIdx();
 
 		void setWriteIdx(int write_idx);
-		void setFdRead(int fd);
 };
 
 void setFDonTable(int fd, t_fdset set);
