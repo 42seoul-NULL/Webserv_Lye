@@ -8,6 +8,7 @@ CGI::CGI(void)
 {
 	this->pid = 0;
 	pipe(this->request_fd);
+	pipe(this->response_fd);
 }
 
 CGI::~CGI(void)
@@ -17,8 +18,6 @@ CGI::~CGI(void)
 
 void	CGI::testCGICall(Request& request, Location& location, std::string& file_name)
 {
-	this->response_file_fd = open((".res_" + ft_itoa(request.getClient()->getSocketFd())).c_str(), O_CREAT | O_TRUNC | O_RDWR, 0777);
-
 	this->pid = fork();
 	if (this->pid == 0)
 	{
@@ -27,8 +26,9 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		file_path = location.getRoot() + file_path;
 		char **env = this->setCGIEnvironment(request, location, file_path);
 		close(this->request_fd[1]);
+		close(this->response_fd[0]);
 		dup2(this->request_fd[0], 0);
-		dup2(this->response_file_fd, 1);
+		dup2(this->response_fd[1], 1);
 		if (file_name.substr(file_name.find('.')) == ".php")
 		{
 			char **lst = (char **)malloc(sizeof(char *) * 3);
@@ -56,24 +56,27 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	}
 	else
 	{
+		close(this->request_fd[0]);
+		close(this->response_fd[1]);
+		fcntl(this->request_fd[1], F_SETFL, O_NONBLOCK);
+		fcntl(this->response_fd[0], F_SETFL, O_NONBLOCK);
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
-		pipe_fd->setFdRead(request_fd[0]);
 
 		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
-		setFDonTable(this->request_fd[1], FD_WRONLY); // pipe는 writes만
+		setFDonTable(this->request_fd[1], FD_WRONLY);
 		if (MANAGER->getWebserver().getFDMax() < this->request_fd[1])
 		{
 			MANAGER->getWebserver().setFDMax(this->request_fd[1]);
 		}
 		
-		//reponse_file_fd fd_table에 insert
+		//reponse_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
-		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->response_file_fd, resource_fd));
-		setFDonTable(this->response_file_fd, FD_RDONLY);
-		if (MANAGER->getWebserver().getFDMax() < this->response_file_fd)
+		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->response_fd[0], resource_fd));
+		setFDonTable(this->response_fd[0], FD_RDONLY);
+		if (MANAGER->getWebserver().getFDMax() < this->response_fd[0])
 		{
-			MANAGER->getWebserver().setFDMax(this->response_file_fd);
+			MANAGER->getWebserver().setFDMax(this->response_fd[0]);
 		}
 		return ;
 	}
@@ -84,9 +87,9 @@ int		*CGI::getRequestFD(void) const
 	return (const_cast<int *>(this->request_fd));
 }
 
-int		CGI::getResponseFileFD(void) const
+int		*CGI::getResponseFD(void) const
 {
-	return (this->response_file_fd);
+	return (const_cast<int *>(this->response_fd));
 }
 
 char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string &file_path)

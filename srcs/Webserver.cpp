@@ -332,7 +332,6 @@ bool	Webserver::run(struct timeval timeout)
 							pipefd->setWriteIdx(write_idx + write_size);
 							continue ;
 						}
-						close(pipefd->getFdRead());
 						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 					}
 				}
