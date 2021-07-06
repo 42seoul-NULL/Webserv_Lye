@@ -1,4 +1,5 @@
 #include "../includes/Client.hpp"
+#include "Manager.hpp"
 
 Client::Client()
 {
@@ -9,6 +10,7 @@ Client::Client()
 	this->response.setClient(this);
 	this->last_request_ms = 0;
 	this->server = NULL;
+	this->session_id = 0;
 }
 
 Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
@@ -18,6 +20,7 @@ Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_so
 	this->response.setClient(this);
 	this->last_request_ms = 0;
 	this->server = NULL;
+	this->session_id = 0;
 }
 
 Client::~Client()
@@ -52,6 +55,12 @@ void	Client::setServer(Server &server)
 {
 	this->server = &server;
 }
+
+void	Client::setSessionId(size_t session_id)
+{
+	this->session_id = session_id;
+}
+
 
 t_status	Client::getStatus()
 {
@@ -88,6 +97,12 @@ Server		*Client::getServer()
 	return (this->server);
 }
 
+size_t	Client::getSessionId(void)
+{
+	return (this->session_id);
+}
+
+
 int Client::readRequest(void)
 {
 	this->setLastRequestMs(ft_get_time());
@@ -110,6 +125,15 @@ int Client::readRequest(void)
 	this->request.getRawRequest() += buf;
 
 	if (this->request.tryMakeRequest() == true)
+	{
+		// if (this->parseSessionId() == false)
+		// 	this->session_id = this->server->generateNewSession();
 		this->status = REQUEST_COMPLETE;
+	}
 	return (1);
 }
+
+// bool Client::parseSessionId(void)
+// {
+// 	if (this->request.getHeaders().count("Cookie"));
+// }

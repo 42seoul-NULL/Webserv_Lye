@@ -22,7 +22,7 @@ Response::~Response()
 
 }
 
-std::map<std::string, std::string>&	Response::getHeaders(void)
+std::multimap<std::string, std::string>&	Response::getHeaders(void)
 {
 	return (this->headers);
 }

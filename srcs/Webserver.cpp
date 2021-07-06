@@ -219,7 +219,7 @@ bool	Webserver::run(struct timeval timeout)
 
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
-						disconnect_client(*client);
+						this->disconnect_client(*client);
 						std::cout << "disconnected: " << i << std::endl;
 						continue ;
 					}

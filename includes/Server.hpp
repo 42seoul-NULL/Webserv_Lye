@@ -3,6 +3,7 @@
 
 # include <iostream>
 # include <map>
+# include <list>
 # include <arpa/inet.h>
 # include <sys/socket.h>
 # include <sys/time.h>
@@ -23,6 +24,8 @@ class Server
 		int				socket_fd;
 		std::map<std::string, Location> locations;
 		std::map<int, Client> clients;
+		std::map<size_t, std::list<std::string> > session_logs;
+		size_t session_count;
 
 	public	:
 		Server();
@@ -40,6 +43,7 @@ class Server
 		unsigned short	   getPort() const;
 		int				   getSocketFd() const;
 		std::map<int, Client> &getClients();
+		std::map<size_t, std::list<std::string> > &getSessionLogs();
 
 		std::map<std::string, Location> &getLocations();
 		int acceptClient(int server_fd, int &fd_max);
@@ -48,6 +52,7 @@ class Server
 		bool isCorrectAuth(Location &location, Client &client);
 		bool isDirectoryName(const std::string &path);
 		int cleanUpLocationRoot(Client &client, const std::string &root);
+		size_t generateNewSession(void);
 };
 
 #endif

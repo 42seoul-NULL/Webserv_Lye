@@ -16,7 +16,7 @@ class Response
 {
 	private:
 		std::string start_line;
-		std::map<std::string, std::string> headers;
+		std::multimap<std::string, std::string> headers;
 		std::string body;
 		int status;
 		std::string raw_response;
@@ -31,7 +31,7 @@ class Response
 		Response();
 		virtual	~Response();
 
-		std::map<std::string, std::string>&	getHeaders(void);
+		std::multimap<std::string, std::string>&	getHeaders(void);
 		std::string &getRawResponse(void);
 		Client *getClient();
 		std::string &getBody(void);
