@@ -67,6 +67,7 @@ class Response
 		void	makeRawResponse(void);
 		void	initResponse(void);
 		void	generateErrorPage(int status);
+		void	generateSessionCookie(void);
 
 };
 

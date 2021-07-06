@@ -9,7 +9,7 @@
 
 Server::Server() : port(-1), socket_fd(-1)
 {
-	
+	this->session_count = 0;
 }
 
 Server::Server(const Server& src)
@@ -20,6 +20,7 @@ Server::Server(const Server& src)
 	this->socket_fd = src.socket_fd;
 	this->locations.insert(src.locations.begin(), src.locations.end());
 	this->clients.insert(src.clients.begin(), src.clients.end());
+	this->session_count = src.session_count;
 }
 
 Server &Server::operator=(const Server &src)
@@ -31,7 +32,7 @@ Server &Server::operator=(const Server &src)
 	this->locations.clear();
 	this->locations.insert(src.locations.begin(), src.locations.end());
 	this->clients.insert(src.clients.begin(), src.clients.end());
-
+	this->session_count = src.session_count;
 	return (*this);
 }
 

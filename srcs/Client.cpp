@@ -1,5 +1,6 @@
 #include "../includes/Client.hpp"
 #include "Manager.hpp"
+#include <list>
 
 Client::Client()
 {
@@ -11,6 +12,7 @@ Client::Client()
 	this->last_request_ms = 0;
 	this->server = NULL;
 	this->session_id = 0;
+	this->is_new_session = true;
 }
 
 Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_socket_fd), socket_fd(socket_fd)
@@ -21,6 +23,7 @@ Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_so
 	this->last_request_ms = 0;
 	this->server = NULL;
 	this->session_id = 0;
+	this->is_new_session = true;
 }
 
 Client::~Client()
@@ -59,6 +62,11 @@ void	Client::setServer(Server &server)
 void	Client::setSessionId(size_t session_id)
 {
 	this->session_id = session_id;
+}
+
+void	Client::setSessionFlag(bool flag)
+{
+	this->is_new_session = flag;
 }
 
 
@@ -102,6 +110,11 @@ size_t	Client::getSessionId(void)
 	return (this->session_id);
 }
 
+bool	Client::getSessionFlag(void)
+{
+	return (this->is_new_session);
+}
+
 
 int Client::readRequest(void)
 {
@@ -126,8 +139,14 @@ int Client::readRequest(void)
 
 	if (this->request.tryMakeRequest() == true)
 	{
-		if (this->parseSessionId() == false)
-			this->session_id = this->server->generateNewSession();
+		if (this->parseSessionId() == false) // cookie에 session id 적혀있지 않은 경우
+		{
+			this->session_id = this->server->generateNewSession(); // session id 발급
+			this->is_new_session = true;
+		}
+		else
+			this->is_new_session = false;
+		this->server->getSessionLogs()[this->session_id].push_back(this->request.getMethod() + " " + this->request.getUri());
 		this->status = REQUEST_COMPLETE;
 	}
 	return (1);

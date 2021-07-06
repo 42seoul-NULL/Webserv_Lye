@@ -22,6 +22,7 @@ class Client
 		Response		response;
 		Server			*server;
 		size_t			session_id;
+		bool			is_new_session;
 
 	public:
 		Client();
@@ -34,6 +35,7 @@ class Client
 		void		setLastRequestMs(unsigned long last_request_ms);
 		void		setServer(Server &server);
 		void		setSessionId(size_t session_id);
+		void		setSessionFlag(bool flag);
 
 		int			getSocketFd();
 		int			getServerSocketFd();
@@ -44,6 +46,7 @@ class Client
 		Response	&getResponse();
 		Server		*getServer();
 		size_t		getSessionId();
+		bool		getSessionFlag();
 
 		int readRequest(void);
 		bool parseSessionId(void);
