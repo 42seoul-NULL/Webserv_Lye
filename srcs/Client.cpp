@@ -126,14 +126,41 @@ int Client::readRequest(void)
 
 	if (this->request.tryMakeRequest() == true)
 	{
-		// if (this->parseSessionId() == false)
-		// 	this->session_id = this->server->generateNewSession();
+		if (this->parseSessionId() == false)
+			this->session_id = this->server->generateNewSession();
 		this->status = REQUEST_COMPLETE;
 	}
 	return (1);
 }
 
-// bool Client::parseSessionId(void)
-// {
-// 	if (this->request.getHeaders().count("Cookie"));
-// }
+bool Client::parseSessionId(void)
+{
+	if (this->request.getHeaders().count("Cookie") == 0)
+		return (false);
+
+	std::multimap<std::string, std::string>::const_iterator iter_first = this->request.getHeaders().lower_bound("Cookie");
+	std::multimap<std::string, std::string>::const_iterator iter_last = this->request.getHeaders().upper_bound("Cookie");
+
+	size_t pos;
+	while (iter_first != iter_last)
+	{
+		if ((pos = iter_first->second.find("webserv_session_id")) != std::string::npos)
+		{
+			std::vector<std::string> tokens;
+			ft_split(iter_first->second, "; ", tokens);
+
+			size_t id_pos;
+			for (std::vector<std::string>::const_iterator iter = tokens.begin(); iter != tokens.end(); ++iter)
+			{
+				id_pos = (*iter).find("webserv_session_id=");
+				if (id_pos == std::string::npos)
+					break ;
+				std::string id = (*iter).substr(id_pos + 19, (*iter).find(';', id_pos));
+				this->session_id = static_cast<size_t>(ft_atoi(id));
+				return (true);
+			}
+			tokens.clear();
+		}
+	}
+	return (false);
+}
