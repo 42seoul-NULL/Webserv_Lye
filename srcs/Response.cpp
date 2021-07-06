@@ -447,6 +447,38 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 	this->client->setStatus(RESPONSE_COMPLETE);
 }
 
+void	Response::makeLogResponse(void)
+{
+	std::list<std::string> &logs = this->client->getServer()->getSessionLogs()[this->client->getSessionId()];
+
+	this->body += "<html>\r\n";
+	this->body += "<head>\r\n";
+	this->body += std::string("<title>") + "HyeonSkkiDashi/1.0 Log" + "</title>\r\n";
+	this->body += "</head>\r\n";
+	this->body += "<body bgcolor=\"white\">\r\n";
+	this->body += std::string("<h1>") + "Requested URL" + "</h1>\r\n";
+	this->body += "<hr>\r\n";
+	for (std::list<std::string>::iterator it = logs.begin(); it != logs.end(); it++)
+	{
+		this->body += *it + std::string("<br>");
+		this->body += "\r\n";
+	}
+	this->body += "<hr>\r\n";
+	this->body += "<center>HyeonSkkiDashi/1.0</center>\r\n";
+	this->body += "</body>\r\n";
+	this->body += "</html>";
+
+	this->status = 200;
+	this->generateDate();
+	this->generateContentLength();
+	this->generateServer();
+	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
+	
+	this->makeStartLine();
+	this->makeRawResponse();
+	this->client->setStatus(RESPONSE_COMPLETE);
+}
+
 void		Response::generateErrorPage(int status)
 {
 	this->status = status;
@@ -468,11 +500,6 @@ void		Response::generateErrorPage(int status)
 
 void	Response::generateSessionCookie(void)
 {
-	// std::cout << "??" << std::endl;
-	// std::cout << this->client->getSessionFlag() << std::endl;
-	// if (this->headers.find("Set-Cookie") != this->headers.end())
-	// 	std::cout <<"cookie:" << this->headers.find("Set-Cookie")->second << std::endl;
-
 	if (this->client->getSessionFlag() == true)
 	{
 		time_t t;
@@ -484,7 +511,6 @@ void	Response::generateSessionCookie(void)
 		strftime(buffer, 4096, "%A, %d-%b-%Y %H:%M:%S GMT", timeinfo);
 
 		std::string cookie;
-		std::cout << this->client->getSessionId() << std::endl;
 		cookie += ("webserv_session_id=" + ft_itoa(this->client->getSessionId()));
 		cookie += "; ";
 		cookie += "path=/; ";

@@ -41,6 +41,7 @@ class Response
 		void setClient(Client *client);
 		void setResIdx(size_t res_idx);
 		void setWriting(bool is_writing);
+
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
 		void	makePutResponse(Request &request);
 		void	makeDeleteResponse(Request &request);
@@ -63,6 +64,7 @@ class Response
 		void	makeStartLine();
 		void	makeErrorResponse(int status, Location *location);
 		void	makeAutoIndexResponse(std::string &path, const std::string &uri);
+		void	makeLogResponse(void);
 		
 		void	makeRawResponse(void);
 		void	initResponse(void);
