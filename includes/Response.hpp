@@ -16,7 +16,7 @@ class Response
 {
 	private:
 		std::string start_line;
-		std::map<std::string, std::string> headers;
+		std::multimap<std::string, std::string> headers;
 		std::string body;
 		int status;
 		std::string raw_response;
@@ -31,7 +31,7 @@ class Response
 		Response();
 		virtual	~Response();
 
-		std::map<std::string, std::string>&	getHeaders(void);
+		std::multimap<std::string, std::string>&	getHeaders(void);
 		std::string &getRawResponse(void);
 		Client *getClient();
 		std::string &getBody(void);
@@ -41,6 +41,7 @@ class Response
 		void setClient(Client *client);
 		void setResIdx(size_t res_idx);
 		void setWriting(bool is_writing);
+
 		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
 		void	makePutResponse(Request &request);
 		void	makeDeleteResponse(Request &request);
@@ -63,10 +64,12 @@ class Response
 		void	makeStartLine();
 		void	makeErrorResponse(int status, Location *location);
 		void	makeAutoIndexResponse(std::string &path, const std::string &uri);
+		void	makeLogResponse(void);
 		
 		void	makeRawResponse(void);
 		void	initResponse(void);
 		void	generateErrorPage(int status);
+		void	generateSessionCookie(void);
 
 };
 

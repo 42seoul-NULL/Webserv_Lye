@@ -11,6 +11,8 @@
 #define CGI_RESPONSE 1
 #define REDIRECT_RESPONSE 2
 #define AUTOINDEX_RESPONSE 3
+#define LOG_RESPONSE 4
+
 
 Webserver::Webserver() : fd_max(-1)
 {
@@ -219,7 +221,7 @@ bool	Webserver::run(struct timeval timeout)
 
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
-						disconnect_client(*client);
+						this->disconnect_client(*client);
 						std::cout << "disconnected: " << i << std::endl;
 						continue ;
 					}
@@ -419,6 +421,12 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 
 	if (client.getRequest().getMethod() == "GET" || client.getRequest().getMethod() == "HEAD" || client.getRequest().getMethod() == "POST")
 	{
+		if (uri.find("/cookie_test") != std::string::npos)
+		{
+			client.getResponse().makeLogResponse();
+			return (LOG_RESPONSE);
+		}
+
 		if (uri[uri.length() - 1] != '/')
 			uri += '/';
 		

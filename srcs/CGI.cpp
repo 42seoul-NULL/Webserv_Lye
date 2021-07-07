@@ -96,20 +96,24 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string 
 {
 	std::map<std::string, std::string> cgi_env;
 
-	if (request.getHeaders()["Authorization"] != "")
+	std::multimap<std::string, std::string>::iterator iter = request.getHeaders().find("Authorization");
+	if (iter != request.getHeaders().end() && iter->second != "")
 	{
-		std::size_t found = request.getHeaders()["Authorization"].find(' ');
-		cgi_env.insert(std::pair<std::string, std::string>("AUTH_TYPE", request.getHeaders()["Authorization"].substr(0, found)));
+		std::size_t found = iter->second.find(' ');
+		cgi_env.insert(std::pair<std::string, std::string>("AUTH_TYPE", iter->second.substr(0, found)));
 	}
-	if (request.getHeaders()["Content-Length"] != "")
-		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", request.getHeaders()["Content-Length"]));
-	else if (request.getHeaders()["Transfer-Encoding"] == "chunked")
+
+	iter = request.getHeaders().find("Content-Length");
+	if (iter != request.getHeaders().end() && iter->second != "")
+		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", iter->second));
+	else if (((iter = request.getHeaders().find("Transfer-Encoding")) != request.getHeaders().end()) && iter->second == "chunked")
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", ft_itoa(request.getRawBody().length())));
 	else
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_LENGTH", "0"));	
 
-	if (request.getHeaders()["Content-Type"] != "")
-		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", request.getHeaders()["Content-Type"]));
+	iter = request.getHeaders().find("Content-Type");
+	if (iter != request.getHeaders().end() && iter->second != "")
+		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", iter->second));
 	cgi_env.insert(std::pair<std::string, std::string>("GATEWAY_INTERFACE", "Cgi/1.1"));
 
 	std::size_t	front_pos = request.getUri().find('.');

@@ -22,7 +22,7 @@ Response::~Response()
 
 }
 
-std::map<std::string, std::string>&	Response::getHeaders(void)
+std::multimap<std::string, std::string>&	Response::getHeaders(void)
 {
 	return (this->headers);
 }
@@ -177,6 +177,7 @@ void		Response::makeResponseHeader(Request& request)
 	this->generateContentType(request);
 	this->generateServer();
 	this->generateContentLength();
+	this->generateSessionCookie();
 
 }
 
@@ -187,6 +188,7 @@ void		Response::makeCGIResponseHeader(Request& request)
 	this->generateContentLocation(request);
 	this->generateServer();
 	this->generateContentLength();
+	this->generateSessionCookie();
 }
 
 void	Response::generateAllow(Request& request)
@@ -355,6 +357,7 @@ void	Response::makeErrorResponse(int status, Location *location)
 			this->body.clear();
 		if (status == 401)
 			this->generateWWWAuthenticate();
+		this->generateSessionCookie();
 		this->makeStartLine();
 		this->makeRawResponse();
 		this->client->setStatus(RESPONSE_COMPLETE);
@@ -437,6 +440,39 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 	this->generateDate();
 	this->generateServer();
 	this->generateContentLength();
+	this->generateSessionCookie();
+	
+	this->makeStartLine();
+	this->makeRawResponse();
+	this->client->setStatus(RESPONSE_COMPLETE);
+}
+
+void	Response::makeLogResponse(void)
+{
+	std::list<std::string> &logs = this->client->getServer()->getSessionLogs()[this->client->getSessionId()];
+
+	this->body += "<html>\r\n";
+	this->body += "<head>\r\n";
+	this->body += std::string("<title>") + "HyeonSkkiDashi/1.0 Log" + "</title>\r\n";
+	this->body += "</head>\r\n";
+	this->body += "<body bgcolor=\"white\">\r\n";
+	this->body += std::string("<h1>") + "Requested URL" + "</h1>\r\n";
+	this->body += "<hr>\r\n";
+	for (std::list<std::string>::iterator it = logs.begin(); it != logs.end(); it++)
+	{
+		this->body += *it + std::string("<br>");
+		this->body += "\r\n";
+	}
+	this->body += "<hr>\r\n";
+	this->body += "<center>HyeonSkkiDashi/1.0</center>\r\n";
+	this->body += "</body>\r\n";
+	this->body += "</html>";
+
+	this->status = 200;
+	this->generateDate();
+	this->generateContentLength();
+	this->generateServer();
+	this->headers.insert(std::pair<std::string, std::string>("Content-Type", "text/html"));
 	
 	this->makeStartLine();
 	this->makeRawResponse();
@@ -460,4 +496,28 @@ void		Response::generateErrorPage(int status)
 	this->body += "<center>HyeonSkkiDashi/1.0</center>\r\n";
 	this->body += "</body>\r\n";
 	this->body += "</html>";
+}
+
+void	Response::generateSessionCookie(void)
+{
+	if (this->client->getSessionFlag() == true)
+	{
+		time_t t;
+		char buffer[4096];
+		struct tm* timeinfo;
+
+		t = (time(NULL) + 24 * 60 * 60);
+		timeinfo = localtime(&t);
+		strftime(buffer, 4096, "%A, %d-%b-%Y %H:%M:%S GMT", timeinfo);
+
+		std::string cookie;
+		cookie += ("webserv_session_id=" + ft_itoa(this->client->getSessionId()));
+		cookie += "; ";
+		cookie += "path=/; ";
+		cookie += ("expires=" + std::string(buffer));
+		cookie += "; ";
+		
+		this->headers.insert(std::pair<std::string, std::string>("Set-Cookie", cookie));
+		this->client->setSessionFlag(false);
+	}
 }

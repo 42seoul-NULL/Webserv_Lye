@@ -13,7 +13,7 @@ class Server;
 
 class Client
 {
-	private	:
+	private:
 		t_status		status;
 		int				server_socket_fd;
 		int				socket_fd;
@@ -21,8 +21,10 @@ class Client
 		Request			request;
 		Response		response;
 		Server			*server;
+		size_t			session_id;
+		bool			is_new_session;
 
-	public	:
+	public:
 		Client();
 		Client(int server_socket_fd, int socket_fd);
 		~Client();
@@ -32,6 +34,8 @@ class Client
 		void		setStatus(t_status status);
 		void		setLastRequestMs(unsigned long last_request_ms);
 		void		setServer(Server &server);
+		void		setSessionId(size_t session_id);
+		void		setSessionFlag(bool flag);
 
 		int			getSocketFd();
 		int			getServerSocketFd();
@@ -41,8 +45,11 @@ class Client
 		Request		&getRequest();
 		Response	&getResponse();
 		Server		*getServer();
+		size_t		getSessionId();
+		bool		getSessionFlag();
 
 		int readRequest(void);
+		bool parseSessionId(void);
 
 };
 

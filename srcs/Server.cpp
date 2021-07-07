@@ -9,7 +9,7 @@
 
 Server::Server() : port(-1), socket_fd(-1)
 {
-	
+	this->session_count = 0;
 }
 
 Server::Server(const Server& src)
@@ -20,6 +20,7 @@ Server::Server(const Server& src)
 	this->socket_fd = src.socket_fd;
 	this->locations.insert(src.locations.begin(), src.locations.end());
 	this->clients.insert(src.clients.begin(), src.clients.end());
+	this->session_count = src.session_count;
 }
 
 Server &Server::operator=(const Server &src)
@@ -31,7 +32,7 @@ Server &Server::operator=(const Server &src)
 	this->locations.clear();
 	this->locations.insert(src.locations.begin(), src.locations.end());
 	this->clients.insert(src.clients.begin(), src.clients.end());
-
+	this->session_count = src.session_count;
 	return (*this);
 }
 
@@ -87,6 +88,11 @@ int					Server::getSocketFd() const
 std::map<int, Client> &Server::getClients()
 {
 	return (this->clients);
+}
+
+std::map<size_t, std::list<std::string> > &Server::getSessionLogs()
+{
+	return (this->session_logs);
 }
 
 
@@ -170,8 +176,11 @@ bool Server::isCorrectAuth(Location &location, Client &client)
 	char auth_key[200];
 
 	memset(auth_key, 0, 200);
-	std::size_t found = client.getRequest().getHeaders()["Authorization"].find(' ');
-	MANAGER->decode_base64(client.getRequest().getHeaders()["Authorization"].substr(found + 1).c_str(), auth_key, client.getRequest().getHeaders()["Authorization"].length());
+	
+	std::multimap<std::string, std::string>::iterator iter = client.getRequest().getHeaders().find("Authorization");
+
+	std::size_t found = iter->second.find(' ');
+	MANAGER->decode_base64(iter->second.substr(found + 1).c_str(), auth_key, iter->second.length());
 	if (std::string(auth_key) != location.getAuthKey())
 		return (false);
 	return (true);
@@ -218,4 +227,11 @@ int Server::cleanUpLocationRoot(Client &client, const std::string &root)
 			unlink((path + name).c_str());
 	}
 	return (200);
+}
+
+size_t Server::generateNewSession(void)
+{
+	size_t ret = this->session_count;
+	++this->session_count;
+	return (ret);
 }

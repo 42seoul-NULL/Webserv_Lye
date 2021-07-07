@@ -23,7 +23,7 @@ class Request
 		std::string	method;
 		std::string	uri;
 		std::string	http_version;
-		std::map<std::string, std::string> headers;
+		std::multimap<std::string, std::string> headers;
 
 		std::string raw_header;
 		std::string	raw_body;
@@ -45,7 +45,7 @@ class Request
 		const std::string&	getMethod(void) const;
 		const std::string&	getUri(void) const;
 		const std::string&	getHttpVersion(void) const;
-		std::map<std::string, std::string>&	getHeaders(void) const;
+		std::multimap<std::string, std::string>&	getHeaders(void);
 		const	std::string&	getRawHeader(void) const;
 		const std::string&	getRawBody(void) const;
 		const std::string& getTempBody(void) const;
