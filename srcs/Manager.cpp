@@ -75,15 +75,6 @@ std::map<std::string, std::string> &Manager::getStatusCode()
 	return (this->status_code);
 }
 
-void	Manager::deleteFromFDTable(int fd, FDType *fd_type, t_fdset set)
-{
-	delete fd_type;
-	MANAGER->getFDTable()[fd] = NULL;
-	MANAGER->getFDTable().erase(fd);
-	clrFDonTable(fd, set);
-	close(fd);
-}
-
 bool	Manager::isReserved(const std::string &src)
 {
 	if (src == "server" || 
@@ -234,29 +225,14 @@ bool	Manager::parseConfig(const char *config_file_path)
 	return (true);	
 }
 
-std::map<int, FDType *> &Manager::getFDTable()
-{
-	return (this->fd_table);
-}
-
 Webserver &Manager::getWebserver()
 {
 	return (this->webserver);
 }
 
-fd_set &Manager::getReads(void)
+std::multimap<int, struct kevent> &Manager::getEventMap()
 {
-	return (this->reads);
-}
-
-fd_set &Manager::getWrites(void)
-{
-	return (this->writes);
-}
-
-fd_set &Manager::getErrors(void)
-{
-	return (this->errors);
+	return (this->event_map);
 }
 
 int Manager::decode_base64(const char * text, char * dst, int numBytes)

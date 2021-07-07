@@ -24,10 +24,8 @@ class Manager
 		static Manager*	instance;
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
-		std::map<int, FDType *> fd_table;
-		fd_set	reads;
-		fd_set	writes;
-		fd_set	errors;
+
+		std::multimap<int, struct kevent> event_map;
 		Webserver webserver;
 		void	initMimeType(void);
 		void	initStatusCode(void);
@@ -40,14 +38,10 @@ class Manager
 		std::map<int, Server>& getServerConfigs();
 		std::map<std::string, std::string>& getMimeType();	
 		std::map<std::string, std::string>& getStatusCode();
-		void	deleteFromFDTable(int fd, FDType *fd_type, t_fdset set);
 
 		bool	parseConfig(const char *config_file_path);
-		std::map<int, FDType *> &getFDTable();
 		Webserver &getWebserver();
-		fd_set &getReads(void);
-		fd_set &getWrites(void);
-		fd_set &getErrors(void);
+		std::multimap<int, struct kevent> &getEventMap();
 		int decode_base64(const char * text, char * dst, int numBytes);
 
 };

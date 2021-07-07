@@ -86,7 +86,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->cgi_raw += buf;
 			return ;
 		}
-		MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
+		clrFDonTable(fd, FD_RDONLY);
 		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
@@ -102,7 +102,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			this->body += std::string(buf);
 			return ;
 		}
-		MANAGER->deleteFromFDTable(fd, resource_fd, FD_RDONLY);
+		clrFDonTable(fd, FD_RDONLY);
 		if (read_size == -1)
 		{
 			this->makeErrorResponse(500, NULL); // 500 Error
@@ -372,12 +372,7 @@ void	Response::makeErrorResponse(int status, Location *location)
 			return ;
 		}
 		ResourceFD *error_resource = new ResourceFD(ERROR_RESOURCE_FDTYPE, this->client);
-		MANAGER->getFDTable().insert(std::pair<int, FDType*>(fd, error_resource));
-		setFDonTable(fd, FD_RDONLY);
-		if (MANAGER->getWebserver().getFDMax() < fd)
-		{
-			MANAGER->getWebserver().setFDMax(fd);
-		}
+		setFDonTable(fd, FD_RDONLY, error_resource, NULL);
 	}
 }
 

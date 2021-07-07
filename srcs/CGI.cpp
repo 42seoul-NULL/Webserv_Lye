@@ -62,22 +62,11 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		fcntl(this->response_fd[0], F_SETFL, O_NONBLOCK);
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
-
-		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->request_fd[1], pipe_fd));
-		setFDonTable(this->request_fd[1], FD_WRONLY);
-		if (MANAGER->getWebserver().getFDMax() < this->request_fd[1])
-		{
-			MANAGER->getWebserver().setFDMax(this->request_fd[1]);
-		}
+		setFDonTable(this->request_fd[1], FD_WRONLY, NULL, pipe_fd);
 		
 		//reponse_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
-		MANAGER->getFDTable().insert(std::pair<int, FDType *>(this->response_fd[0], resource_fd));
-		setFDonTable(this->response_fd[0], FD_RDONLY);
-		if (MANAGER->getWebserver().getFDMax() < this->response_fd[0])
-		{
-			MANAGER->getWebserver().setFDMax(this->response_fd[0]);
-		}
+		setFDonTable(this->response_fd[0], FD_RDONLY, resource_fd, NULL);
 		return ;
 	}
 }

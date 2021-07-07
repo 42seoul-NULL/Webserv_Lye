@@ -46,7 +46,7 @@ class Server
 		std::map<size_t, std::list<std::string> > &getSessionLogs();
 
 		std::map<std::string, Location> &getLocations();
-		int acceptClient(int server_fd, int &fd_max);
+		int acceptClient(int server_fd);
 		bool isCgiRequest(Location &location, Request &request);
 		int	createFileWithDirectory(std::string path);
 		bool isCorrectAuth(Location &location, Client &client);
