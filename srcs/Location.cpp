@@ -16,7 +16,7 @@ Location::Location(const Location &src)
 	this->request_max_body_size = src.request_max_body_size;
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extensions = src.cgi_extensions;
+	this->cgi_infos = src.cgi_infos;
 	this->auth_key = src.auth_key;
 	this->redirect_return = src.redirect_return;
 	this->redirect_addr = src.redirect_addr;
@@ -32,8 +32,8 @@ Location &Location::operator=(const Location &src)
 	this->request_max_body_size = src.request_max_body_size;
 	this->upload_path = src.upload_path;
 	this->auto_index = src.auto_index;
-	this->cgi_extensions.clear();
-	this->cgi_extensions = src.cgi_extensions;
+	this->cgi_infos.clear();
+	this->cgi_infos = src.cgi_infos;
 	this->auth_key = src.auth_key;
 	this->redirect_return = src.redirect_return;
 	this->redirect_addr = src.redirect_addr;
@@ -63,9 +63,9 @@ void		Location::setAutoIndex(bool auto_index)
 	return ;
 }
 
-void		Location::setCgiExtensions(std::vector<std::string> &cgi_extensions)
+void		Location::setCgiInfos(std::map<std::string, std::string> &cgi_infos)
 {
-	this->cgi_extensions = cgi_extensions;
+	this->cgi_infos = cgi_infos;
 	return ;
 }
 
@@ -127,9 +127,9 @@ bool	Location::getAutoIndex()
 	return (this->auto_index);
 }
 
-std::vector<std::string> &Location::getCgiExtensions()
+std::map<std::string, std::string> &Location::getCgiInfos()
 {
-	return (this->cgi_extensions);
+	return (this->cgi_infos);
 }
 
 const std::string &Location::getAuthKey()

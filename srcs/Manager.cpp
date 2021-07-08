@@ -1,6 +1,7 @@
 #include "../includes/Manager.hpp"
 #include "Location.hpp"
 #include "Type.hpp"
+#include <fstream>
 
 
 Manager* Manager::instance;
@@ -89,7 +90,7 @@ bool	Manager::isReserved(const std::string &src)
 		src == "auto_index" ||
 		src == "request_max_body_size" ||
 		src == "auth_key" ||
-		src == "cgi_extension" ||
+		src == "cgi_info" ||
 		src == "return" ||
 		src == "}" ||
 		src == "{" )
@@ -99,24 +100,23 @@ bool	Manager::isReserved(const std::string &src)
 
 bool	Manager::parseConfig(const char *config_file_path)
 {
-	int				fd;
 	std::string		line;
-	int				ret;
-	std::string		splited;
 	std::vector<std::string> vec;
 	int key;
 	std::string		location_name;
+	std::ifstream fin;
 
-	fd = open(config_file_path, O_RDONLY);
-	if (fd < 3)
+	fin.open(config_file_path, std::ifstream::in);
+
+	if (!fin.is_open())
 		return (returnFalseWithMsg("Can't open Config file"));
 	try
 	{
-		while ( (ret = get_next_line(fd, line)) > 0)
+		while (std::getline(fin, line))
 		{
-			if (line == "")
-				continue ;
-			splited = ft_split(line, " \t", vec);
+			if (fin.eof())
+				break ;
+			ft_split(line, " \t", vec);
 			line.clear();
 		}
 
@@ -196,10 +196,14 @@ bool	Manager::parseConfig(const char *config_file_path)
 				iter++;
 				instance->server_configs[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
 			}
-			else if (*iter == "cgi_extension")
+			else if (*iter == "cgi_info")
 			{
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].getCgiExtensions().push_back(*iter);
+				std::pair<std::string, std::string> cgi_info;
+				cgi_info.first = *iter;
+				iter++;
+				cgi_info.second = *iter;
+				instance->server_configs[key].getLocations()[location_name].getCgiInfos().insert(cgi_info);
 			}
 			else if (*iter == "auth_key")
 			{
@@ -211,17 +215,17 @@ bool	Manager::parseConfig(const char *config_file_path)
 				iter++;
 				instance->server_configs[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].setRedirectAddr(*iter);				
+				instance->server_configs[key].getLocations()[location_name].setRedirectAddr(*iter);	
 			}
 		}
 	}
 	catch(const char *e)
 	{
 		std::cout << e << std::endl;
-		close(fd);
+		fin.close();
 		return (false);
 	}
-	close(fd);
+	fin.close();
 	return (true);	
 }
 

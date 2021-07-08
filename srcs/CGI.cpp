@@ -16,7 +16,7 @@ CGI::~CGI(void)
 
 }
 
-void	CGI::testCGICall(Request& request, Location& location, std::string& file_name)
+void	CGI::testCGICall(Request& request, Location& location, std::string& file_name, const std::string &exec_name)
 {
 	this->pid = fork();
 	if (this->pid == 0)
@@ -29,24 +29,25 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		close(this->response_fd[0]);
 		dup2(this->request_fd[0], 0);
 		dup2(this->response_fd[1], 1);
-		if (file_name.substr(file_name.find('.')) == ".php")
-		{
-			char **lst = (char **)malloc(sizeof(char *) * 3);
-			lst[0] = strdup("./php-mac/bin/php-cgi");
-			lst[1] = strdup(file_path.c_str());
-			lst[2] = NULL;
-			if (execve("./php-mac/bin/php-cgi", lst, env) == -1)
-			{
-				std::cerr << "PHP CGI EXECUTE ERROR" << std::endl;
-				exit(1);
-			}
-		}
-		else 
+
+		if (file_name.substr(file_name.rfind('.')) == ".bla")
 		{
 			char **lst = (char **)malloc(sizeof(char *) * 2);
 			lst[0] = strdup("./cgi-bin/cgi_tester");
 			lst[1] = NULL;
 			if (execve("./cgi-bin/cgi_tester", lst, env) == -1)
+			{
+				std::cerr << "CGI EXECUTE ERROR" << std::endl;
+				exit(1);
+			}
+		}
+		else
+		{
+			char **lst = (char **)malloc(sizeof(char *) * 3);
+			lst[0] = strdup(exec_name.c_str());
+			lst[1] = strdup(file_path.c_str());
+			lst[2] = NULL;
+			if (execve(exec_name.c_str(), lst, env) == -1)
 			{
 				std::cerr << "CGI EXECUTE ERROR" << std::endl;
 				exit(1);

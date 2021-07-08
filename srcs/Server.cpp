@@ -18,8 +18,8 @@ Server::Server(const Server& src)
 	this->port = src.port;
 	this->server_name =	src.server_name;
 	this->socket_fd = src.socket_fd;
-	this->locations.insert(src.locations.begin(), src.locations.end());
-	this->clients.insert(src.clients.begin(), src.clients.end());
+	this->locations = src.locations;
+	this->clients = src.clients;
 	this->session_count = src.session_count;
 }
 
@@ -29,9 +29,8 @@ Server &Server::operator=(const Server &src)
 	this->port	=	src.port;
 	this->server_name	=	src.server_name;
 	this->socket_fd		=	src.socket_fd;
-	this->locations.clear();
-	this->locations.insert(src.locations.begin(), src.locations.end());
-	this->clients.insert(src.clients.begin(), src.clients.end());
+	this->locations = src.locations;
+	this->clients = src.clients;
 	this->session_count = src.session_count;
 	return (*this);
 }
@@ -127,7 +126,7 @@ int Server::acceptClient(int server_fd)
 
 bool Server::isCgiRequest(Location &location, Request &request)
 {
-	std::vector<std::string> &cgi_extensions = location.getCgiExtensions();
+	std::map<std::string, std::string> &cgi_infos = location.getCgiInfos();
 
 	size_t dot_pos = request.getUri().find('.');
 	if (dot_pos == std::string::npos)
@@ -137,7 +136,9 @@ bool Server::isCgiRequest(Location &location, Request &request)
 		ext_end++;
 	
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
-	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
+	
+	std::map<std::string, std::string>::const_iterator found;
+	if ((found = cgi_infos.find(res)) == cgi_infos.end())
 		return (false);
 	
 	while (request.getUri()[dot_pos] != '/')
@@ -146,7 +147,7 @@ bool Server::isCgiRequest(Location &location, Request &request)
 
 
 	CGI	cgi;
-	cgi.testCGICall(request, location, res);
+	cgi.testCGICall(request, location, res, found->second);
 	return (true);
 }
 

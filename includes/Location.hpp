@@ -17,7 +17,7 @@ class Location
 		int				request_max_body_size;
 		std::string		upload_path;
 		bool			auto_index;
-		std::vector<std::string> cgi_extensions;
+		std::map<std::string, std::string> cgi_infos;
 		std::string		auth_key;
 
 		int				redirect_return;
@@ -33,7 +33,7 @@ class Location
 		void			setRequestMaxBodySize(int request_max_body_size);
 		void			setUploadPath(const std::string &upload_path);
 		void			setAutoIndex(bool auto_index);
-		void			setCgiExtensions(std::vector<std::string> &cgi_extensions);
+		void			setCgiInfos(std::map<std::string, std::string> &cgi_infos);
 		void			setAuthKey(const std::string &auth_key);
 		void			setRedirectReturn(int redirect_return);
 		void			setRedirectAddr(const std::string &redirect_addr);
@@ -45,7 +45,7 @@ class Location
 		int getRequestMaxBodySize();
 		const std::string &getUploadPath();
 		bool	getAutoIndex();
-		std::vector<std::string> &getCgiExtensions();
+		std::map<std::string, std::string> &getCgiInfos();
 		const std::string &getAuthKey();
 		int		getRedirectReturn();
 		const std::string &getRedirectAddr();
