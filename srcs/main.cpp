@@ -8,9 +8,9 @@ int	main(int argc, char **argv)
 
 	if (MANAGER->parseConfig(argv[1]) == 0)
 		return (EXIT_FAILURE);
-	struct timeval timeout;
+	struct timespec timeout;
 	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
+	timeout.tv_nsec = 0;
 	try
 	{
 		signal(SIGINT, deleteServerResoureces);

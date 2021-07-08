@@ -102,7 +102,7 @@ class PipeFD : public FDType
 		void setWriteIdx(int write_idx);
 };
 
-void setFDonTable(int fd, t_fdset set);
+void setFDonTable(int fd, t_fdset set, void *read_data, void *write_data);
 void clrFDonTable(int fd, t_fdset set);
 
 #endif

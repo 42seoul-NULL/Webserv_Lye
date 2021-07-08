@@ -1,6 +1,8 @@
 #include "Client.hpp"
 #include "Manager.hpp"
 #include "Type.hpp"
+#include <sys/types.h>
+#include <sys/event.h>
 
 int FDType::getType()
 {
@@ -110,24 +112,43 @@ void PipeFD::setWriteIdx(int write_idx)
 
 
 
-void setFDonTable(int fd, t_fdset set)
+void setFDonTable(int fd, t_fdset set, void *read_data, void *write_data)
 {
+	struct kevent event;
+
 	if (set == FD_RDONLY)
-		FT_FD_SET(fd, &(MANAGER->getReads()));
+	{
+		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, read_data);
+		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+	}
 	else if (set == FD_WRONLY)
-		FT_FD_SET(fd, &(MANAGER->getWrites()));
+	{
+		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, write_data);
+		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+	}
 	else if (set == FD_RDWR)
 	{
-		FT_FD_SET(fd, &(MANAGER->getReads()));
-		FT_FD_SET(fd, &(MANAGER->getWrites()));
+		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, read_data);
+		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, write_data);
+		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+
 	}
-	FT_FD_SET(fd, &(MANAGER->getErrors()));
 }
 
 void clrFDonTable(int fd, t_fdset set)
 {
 	(void)set;
-	FT_FD_CLR(fd, &(MANAGER->getReads()));
-	FT_FD_CLR(fd, &(MANAGER->getWrites()));
-	FT_FD_CLR(fd, &(MANAGER->getErrors()));
+
+	std::multimap<int, struct kevent>::iterator lower = MANAGER->getEventMap().lower_bound(fd);
+	std::multimap<int, struct kevent>::iterator upper = MANAGER->getEventMap().upper_bound(fd);
+
+	while (lower != upper)
+	{
+		delete static_cast<FDType*>(lower->second.udata);
+		lower->second.udata = NULL;
+		++lower;
+	}
+	MANAGER->getEventMap().erase(fd);
+	close(fd);
 }

@@ -101,7 +101,7 @@ std::map<std::string, Location> &Server::getLocations()
 	return (this->locations);
 }
 
-int Server::acceptClient(int server_fd, int &fd_max)
+int Server::acceptClient(int server_fd)
 {
 	struct sockaddr_in  client_addr;
 	socklen_t			addr_size = sizeof(client_addr);
@@ -110,9 +110,6 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_size);
 	fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
-	if (fd_max < client_socket)
-		fd_max = client_socket;
-
 	this->clients[client_socket].setServerSocketFd(server_fd);
 	this->clients[client_socket].setSocketFd(client_socket);
 	this->clients[client_socket].setLastRequestMs(ft_get_time());
@@ -120,8 +117,9 @@ int Server::acceptClient(int server_fd, int &fd_max)
 	this->clients[client_socket].setServer(*this);
 
 	//fd_table 세팅
-	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
-	MANAGER->getFDTable().insert(std::pair<int, FDType*>(client_socket, client_fdtype));
+	FDType *client_fdtype_read = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
+	FDType *client_fdtype_write = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
+	setFDonTable(client_socket, FD_RDWR, client_fdtype_read, client_fdtype_write);
 
 	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
