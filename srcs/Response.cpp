@@ -62,7 +62,7 @@ void Response::setWriting(bool is_writing)
 	this->is_writing = is_writing;
 }
 
-void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request)
+void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request, long to_read)
 {
 	char	buf[BUFFER_SIZE];
 	int		read_size;
@@ -96,18 +96,17 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 	else
 	{
 		read_size = read(fd, buf, BUFFER_SIZE - 1);
-		if (read_size > 0)
-		{
-			buf[read_size] = '\0';
-			this->body += std::string(buf);
-			return ;
-		}
-		clrFDonTable(fd, FD_RDONLY);
 		if (read_size == -1)
 		{
+			clrFDonTable(fd, FD_RDONLY);
 			this->makeErrorResponse(500, NULL); // 500 Error
 			return ;
 		}
+		buf[read_size] = '\0';
+		this->body += std::string(buf);
+		if (to_read - read_size > 0)
+			return ;
+		clrFDonTable(fd, FD_RDONLY);
 		this->status = 200;
 		this->makeResponseHeader(request);
 		this->makeStartLine();

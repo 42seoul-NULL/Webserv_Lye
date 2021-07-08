@@ -42,7 +42,7 @@ class Response
 		void setResIdx(size_t res_idx);
 		void setWriting(bool is_writing);
 
-		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request);
+		void	tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request, long to_read);
 		void	makePutResponse(Request &request);
 		void	makeDeleteResponse(Request &request);
 		void	applyCGIResponse(std::string& raw);

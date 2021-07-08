@@ -218,7 +218,7 @@ bool	Webserver::run(struct timespec timeout)
 				else if (fd_type->getType() == RESOURCE_FDTYPE || fd_type->getType() == CGI_RESOURCE_FDTYPE)
 				{
 					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd_type);
-					resource_fd->getClient()->getResponse().tryMakeResponse(resource_fd, curr_event->ident, resource_fd->getClient()->getRequest());
+					resource_fd->getClient()->getResponse().tryMakeResponse(resource_fd, curr_event->ident, resource_fd->getClient()->getRequest(), curr_event->data);
 				}
 				else if (fd_type->getType() == ERROR_RESOURCE_FDTYPE)
 				{
@@ -425,7 +425,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		} // 파일은 무조건 존재
 
 		client.getRequest().setPath(path);
-		
+
 		int get_fd = open(path.c_str(), O_RDONLY);
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
 		setFDonTable(get_fd, FD_RDONLY, file_fd, NULL);
