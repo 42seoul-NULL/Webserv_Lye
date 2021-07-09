@@ -25,7 +25,7 @@ class Location;
 
 class Webserver
 {
-	private :
+	private:
 		int		kq;
 		struct kevent *monitor_events;
 		struct kevent *return_events;
@@ -34,7 +34,7 @@ class Webserver
 		void	disconnect_client(Client &client);
 		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
 
-	public	:
+	public:
 		Webserver();
 		virtual ~Webserver();
 

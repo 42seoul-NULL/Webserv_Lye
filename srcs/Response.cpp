@@ -249,7 +249,7 @@ void	Response::generateContentLength(void)
 void	Response::generateContentType(Request &request)
 {
 	std::string ext = request.getPath();
-	size_t pos = ext.find('.');
+	size_t pos = ext.rfind('.');
 	if (pos == std::string::npos)
 		this->headers.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	else
@@ -260,7 +260,7 @@ void	Response::generateContentType(Request &request)
 		else			
 		{
 			std::string type = MANAGER->getMimeType()[ext];
-			this->headers.insert(std::pair<std::string, std::string>("Content-Type", type));		
+			this->headers.insert(std::pair<std::string, std::string>("Content-Type", type));
 		}
 	}
 }

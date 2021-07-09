@@ -22,7 +22,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	this->pid = fork();
 	if (this->pid < 0)
 	{
-		std::cerr << "CGI " << file_name << " : fork() error" << std::endl;
+		std::cerr << "CGI " << file_name << ": fork() error" << std::endl;
 		request.getClient()->getResponse().makeErrorResponse(500, NULL);
 	}
 	if (this->pid == 0)
@@ -113,8 +113,8 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string 
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", iter->second));
 	cgi_env.insert(std::pair<std::string, std::string>("GATEWAY_INTERFACE", "Cgi/1.1"));
 
-	std::size_t	front_pos = request.getUri().find('.');
 	std::size_t back_pos = request.getUri().find('?');
+	std::size_t	front_pos = request.getUri().rfind('.', back_pos);
 	std::string path_info = request.getUri().substr(front_pos, back_pos - front_pos);
 
 	if ((front_pos = path_info.find('/')) != std::string::npos)
