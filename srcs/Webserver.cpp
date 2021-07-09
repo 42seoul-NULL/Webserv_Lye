@@ -421,7 +421,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			}
 			else if (res == "Index of") //autoindex list up
 			{
-				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri());
+				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri(), location);
 				return (AUTOINDEX_RESPONSE) ;
 			}
 			else
@@ -483,7 +483,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		if (uri == location.getLocationName())
 		{
 			client.getRequest().setPath(location.getRoot());
-			client.getServer()->cleanUpLocationRoot(client, location.getRoot());
+			client.getServer()->cleanUpLocationRoot(client, location.getRoot(), location);
 			client.getResponse().makeDeleteResponse(client.getRequest());
 			return (GENERAL_RESPONSE);
 		}
@@ -495,7 +495,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			path.erase(--(path.end()));
 			if (ft_remove_directory(path.c_str()) == 1)
 			{
-				client.getResponse().makeErrorResponse(500, NULL);
+				client.getResponse().makeErrorResponse(500, &location);
 				return (500);
 			}
 		}
@@ -507,6 +507,8 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		}
 		client.getResponse().makeDeleteResponse(client.getRequest());
 	}
+	else
+		client.getResponse().makeErrorResponse(501, &location);
 	return (GENERAL_RESPONSE);
 }
 

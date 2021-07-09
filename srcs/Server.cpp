@@ -197,7 +197,7 @@ bool Server::isDirectoryName(const std::string &path)
 	return (true);
 }
 
-int Server::cleanUpLocationRoot(Client &client, const std::string &root)
+int Server::cleanUpLocationRoot(Client &client, const std::string &root, Location &location)
 {
 	std::string path = root;
 	DIR *dir_ptr;
@@ -205,7 +205,7 @@ int Server::cleanUpLocationRoot(Client &client, const std::string &root)
 	if ((dir_ptr = opendir(path.c_str())) == NULL)
 	{
 		std::cerr << "opendir() error!" << std::endl;
-		client.getResponse().makeErrorResponse(500, NULL);
+		client.getResponse().makeErrorResponse(500, &location);
 		return (500);
 	}
 	if (path[path.length() - 1] != '/')
@@ -222,7 +222,7 @@ int Server::cleanUpLocationRoot(Client &client, const std::string &root)
 			ret = ft_remove_directory(path + name);
 			if (ret == 1)
 			{
-				client.getResponse().makeErrorResponse(500, NULL);
+				client.getResponse().makeErrorResponse(500, &location);
 				return (500);
 			}
 		}

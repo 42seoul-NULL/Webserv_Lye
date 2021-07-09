@@ -51,7 +51,7 @@ class Server
 		int	createFileWithDirectory(std::string path);
 		bool isCorrectAuth(Location &location, Client &client);
 		bool isDirectoryName(const std::string &path);
-		int cleanUpLocationRoot(Client &client, const std::string &root);
+		int cleanUpLocationRoot(Client &client, const std::string &root, Location &location);
 		size_t generateNewSession(void);
 };
 

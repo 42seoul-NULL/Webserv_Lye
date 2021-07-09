@@ -363,14 +363,14 @@ void	Response::makeErrorResponse(int status, Location *location)
 	}
 }
 
-void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
+void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri, Location &location)
 {
 	DIR *dir_ptr;
 	struct dirent *file;
 
 	if((dir_ptr = opendir(path.c_str())) == NULL)
 	{
-		this->makeErrorResponse(500, NULL);
+		this->makeErrorResponse(500, &location);
 		return ;
 	}
 
@@ -397,7 +397,7 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 		{
 			this->start_line.clear();
 			this->body.clear();
-			this->makeErrorResponse(500, NULL);
+			this->makeErrorResponse(500, &location);
 			return ;
 		}
 		timeinfo = localtime(&sb.st_mtime);

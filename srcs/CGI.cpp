@@ -16,14 +16,14 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	if (pipe(this->request_fd) == -1 || pipe(this->response_fd) == -1)
 	{
 		std::cerr << "pipe() failed" << std::endl;
-		request.getClient()->getResponse().makeErrorResponse(500, NULL);
+		request.getClient()->getResponse().makeErrorResponse(500, &location);
 	}
 
 	this->pid = fork();
 	if (this->pid < 0)
 	{
 		std::cerr << "CGI " << file_name << ": fork() error" << std::endl;
-		request.getClient()->getResponse().makeErrorResponse(500, NULL);
+		request.getClient()->getResponse().makeErrorResponse(500, &location);
 	}
 	if (this->pid == 0)
 	{
