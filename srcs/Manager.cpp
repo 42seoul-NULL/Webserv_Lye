@@ -112,8 +112,9 @@ bool	Manager::parseConfig(const char *config_file_path)
 		return (returnFalseWithMsg("Can't open Config file"));
 	try
 	{
-		while (std::getline(fin, line))
+		while (1)
 		{
+			std::getline(fin, line);
 			if (fin.eof())
 				break ;
 			ft_split(line, " \t", vec);
@@ -128,7 +129,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 				std::string server_name = *iter;
 				iter++; // listen
 				iter++; // 8080
-				key = ft_atoi(*iter);
+				key = atoi((*iter).c_str());
 				iter++; // 127.0.0.1
 				if (instance->server_configs.find(key) != instance->server_configs.end()) // 이미 존재
 					throw "server_name and port already exists";
@@ -145,7 +146,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "error_page")
 			{
 				iter++;
-				int key2 = ft_atoi(*iter);
+				int key2 = atoi((*iter).c_str());
 				iter++;
 				instance->server_configs[key].getLocations()[location_name].getErrorPages()[key2] = *iter;
 			}
@@ -194,7 +195,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "request_max_body_size")
 			{
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
+				instance->server_configs[key].getLocations()[location_name].setRequestMaxBodySize(atoi((*iter).c_str()));
 			}
 			else if (*iter == "cgi_info")
 			{
@@ -213,7 +214,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "return")
 			{
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
+				instance->server_configs[key].getLocations()[location_name].setRedirectReturn(atoi((*iter).c_str()));
 				iter++;
 				instance->server_configs[key].getLocations()[location_name].setRedirectAddr(*iter);	
 			}

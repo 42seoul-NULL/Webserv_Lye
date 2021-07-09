@@ -21,7 +21,6 @@ class Response
 		int status;
 		std::string raw_response;
 		Client *client;
-		bool	seek_flag;
 		std::string cgi_raw;
 		unsigned long long file_size;
 		size_t res_idx;

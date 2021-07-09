@@ -7,18 +7,24 @@
 CGI::CGI(void)
 {
 	this->pid = 0;
-	pipe(this->request_fd);
-	pipe(this->response_fd);
 }
 
-CGI::~CGI(void)
-{
-
-}
+CGI::~CGI(void) {}
 
 void	CGI::testCGICall(Request& request, Location& location, std::string& file_name, const std::string &exec_name)
 {
+	if (pipe(this->request_fd) == -1 || pipe(this->response_fd) == -1)
+	{
+		std::cerr << "pipe() failed" << std::endl;
+		request.getClient()->getResponse().makeErrorResponse(500, NULL);
+	}
+
 	this->pid = fork();
+	if (this->pid < 0)
+	{
+		std::cerr << "CGI " << file_name << " : fork() error" << std::endl;
+		request.getClient()->getResponse().makeErrorResponse(500, NULL);
+	}
 	if (this->pid == 0)
 	{
 		std::string file_path = request.getUri();
@@ -61,6 +67,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		close(this->response_fd[1]);
 		fcntl(this->request_fd[1], F_SETFL, O_NONBLOCK);
 		fcntl(this->response_fd[0], F_SETFL, O_NONBLOCK);
+
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
 		setFDonTable(this->request_fd[1], FD_WRONLY, NULL, pipe_fd);
@@ -172,5 +179,3 @@ char	**CGI::makeCGIEnvironment(std::map<std::string, std::string> &cgi_env)
 	env[i] = NULL;
 	return (env);
 }
-
-

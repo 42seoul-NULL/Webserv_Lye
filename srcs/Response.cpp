@@ -1,5 +1,5 @@
 #include "Response.hpp"
-#include "libft.hpp"
+#include "utils.hpp"
 #include "Request.hpp"
 #include "Type.hpp"
 #include "Client.hpp"
@@ -9,7 +9,7 @@
 #include <list>
 #include <dirent.h>
 
-Response::Response() : seek_flag(false), is_writing(false)
+Response::Response() : is_writing(false)
 {
 	this->status = DEFAULT_STATUS;
 	this->client = NULL;
@@ -75,17 +75,10 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			std::cerr << "temporary resource read error!" << std::endl;
 			return ;
 		}
-		else if (read_size == 0)
-		{
-			buf[read_size] = '\0';
-			this->cgi_raw += buf;
-		}
-		else
-		{
-			buf[read_size] = '\0';
-			this->cgi_raw += buf;
+		buf[read_size] = '\0';
+		this->cgi_raw += buf;
+		if (read_size != 0)
 			return ;
-		}
 		clrFDonTable(fd, FD_RDONLY);
 		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
 		this->makeCGIResponseHeader(request);
@@ -106,6 +99,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		this->body += std::string(buf);
 		if (to_read - read_size > 0)
 			return ;
+
 		clrFDonTable(fd, FD_RDONLY);
 		this->status = 200;
 		this->makeResponseHeader(request);
@@ -148,7 +142,7 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
-	this->status = ft_atoi(status_line[1]);
+	this->status = atoi(status_line[1].c_str());
 
 	// Header
 	std::vector<std::string> header_line;
@@ -176,7 +170,9 @@ void		Response::makeResponseHeader(Request& request)
 	this->generateContentType(request);
 	this->generateServer();
 	this->generateContentLength();
-	this->generateSessionCookie();
+	#ifdef BONUS
+		this->generateSessionCookie();
+	#endif
 
 }
 
@@ -187,7 +183,10 @@ void		Response::makeCGIResponseHeader(Request& request)
 	this->generateContentLocation(request);
 	this->generateServer();
 	this->generateContentLength();
-	this->generateSessionCookie();
+
+	#ifdef BONUS
+		this->generateSessionCookie();
+	#endif
 }
 
 void	Response::generateAllow(Request& request)
@@ -301,10 +300,9 @@ void	Response::makeRedirectResponse(Location &location)
 
 void	Response::makeStartLine()
 {
-
 	std::map<std::string, std::string>::const_iterator iter = MANAGER->getStatusCode().find(ft_itoa(this->status));
 	if (iter == MANAGER->getStatusCode().end())
-		;
+		return ;
 	this->start_line += "HTTP/1.1 ";
 	this->start_line += ft_itoa(this->status);
 	this->start_line += " ";
@@ -335,7 +333,6 @@ void	Response::initResponse(void)
 	this->body.clear();
 	this->raw_response.clear();
 	this->status = DEFAULT_STATUS;
-	this->seek_flag = false;
 	this->cgi_raw.clear();
 	this->file_size = 0;
 	this->res_idx = 0;
@@ -356,7 +353,11 @@ void	Response::makeErrorResponse(int status, Location *location)
 			this->body.clear();
 		if (status == 401)
 			this->generateWWWAuthenticate();
-		this->generateSessionCookie();
+
+		#ifdef BONUS
+			this->generateSessionCookie();
+		#endif
+
 		this->makeStartLine();
 		this->makeRawResponse();
 		this->client->setStatus(RESPONSE_COMPLETE);
@@ -377,8 +378,8 @@ void	Response::makeErrorResponse(int status, Location *location)
 
 void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 {
-	DIR		*dir_ptr;
-	struct dirent	*file;
+	DIR *dir_ptr;
+	struct dirent *file;
 
 	if((dir_ptr = opendir(path.c_str())) == NULL)
 	{
@@ -395,7 +396,7 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 	this->body += "<hr>\r\n";
 	this->body += "<pre>\r\n";
 
-	while((file = readdir(dir_ptr)) != NULL)
+	while ((file = readdir(dir_ptr)) != NULL)
 	{
 		struct stat	sb;
 		struct tm*	timeinfo;
@@ -434,7 +435,9 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 	this->generateDate();
 	this->generateServer();
 	this->generateContentLength();
-	this->generateSessionCookie();
+	#ifdef BONUS
+		this->generateSessionCookie();
+	#endif
 	
 	this->makeStartLine();
 	this->makeRawResponse();

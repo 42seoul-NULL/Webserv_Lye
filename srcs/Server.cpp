@@ -3,7 +3,7 @@
 #include "Location.hpp"
 #include "Client.hpp"
 #include "CGI.hpp"
-#include "libft.hpp"
+#include "utils.hpp"
 #include <unistd.h>
 #include <dirent.h>
 
@@ -107,11 +107,16 @@ int Server::acceptClient(int server_fd)
 
 	std::cout << "\033[32m server connection called \033[0m" << std::endl;	
 	int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_size);
+	if (client_socket == -1)
+	{
+		std::cerr << "failed to connect client" << std::endl;
+		return (-1);
+	}
+	
 	fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
 	this->clients[client_socket].setServerSocketFd(server_fd);
 	this->clients[client_socket].setSocketFd(client_socket);
-	this->clients[client_socket].setLastRequestMs(ft_get_time());
 	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
 
@@ -162,11 +167,11 @@ int    Server::createFileWithDirectory(std::string path)
     while (pos != std::string::npos)
     {
         std::string temp = path.substr(0, pos);
-        mkdir(temp.c_str(), 0777);
+        mkdir(temp.c_str(), 0644);
         n = pos + 1;
         pos = path.find("/", n);
     }
-    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
+    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0644);
 	return (fd);
 }
 
