@@ -51,7 +51,7 @@ int main(int ac, char **av)
 		// if (!strcmp(message, "q\n") || !strcmp(message, "Q\n"))
 		// 	break ;
 
-	buffer += "GET / HTTP/1.1\r\n";
+	buffer += "GET /php_test/youpi.php HTTP/1.1\r\n";
 	buffer += "Content-Length: 0\r\n\r\n";
 
 	write(sock, buffer.c_str(), buffer.size());

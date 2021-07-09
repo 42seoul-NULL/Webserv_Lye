@@ -60,6 +60,6 @@ This is a HTTP server implemented with C++, using kqueue model.
 - etc)
   - supports session management
     - logging urls that the client had requested
-    - `make re && make bonus`
+    - `make fclean && make bonus`
     - `./webserv configs/test.conf`
     - request GET /cookie_test

@@ -15,8 +15,9 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 {
 	if (pipe(this->request_fd) == -1 || pipe(this->response_fd) == -1)
 	{
-		std::cerr << "pipe() failed" << std::endl;
+		std::cerr << "pipe() failed" << strerror(errno) << std::endl;
 		request.getClient()->getResponse().makeErrorResponse(500, &location);
+		return ;
 	}
 
 	this->pid = fork();
@@ -24,12 +25,18 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 	{
 		std::cerr << "CGI " << file_name << ": fork() error" << std::endl;
 		request.getClient()->getResponse().makeErrorResponse(500, &location);
+		return ;
 	}
-	if (this->pid == 0)
+	else if (this->pid == 0)
 	{
 		std::string file_path = request.getUri();
 		file_path = file_path.substr(location.getLocationName().length());
 		file_path = location.getRoot() + file_path;
+		char *buf = realpath(file_path.c_str(), NULL);
+		if (buf != NULL)
+			file_path = std::string(buf);
+		free(buf);
+
 		char **env = this->setCGIEnvironment(request, location, file_path);
 		close(this->request_fd[1]);
 		close(this->response_fd[0]);

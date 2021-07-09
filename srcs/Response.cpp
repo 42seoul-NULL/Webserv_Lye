@@ -127,11 +127,19 @@ void		Response::makeDeleteResponse(Request &request)
 
 void	Response::applyCGIResponse(std::string& cgi_raw)
 {
+	// php-cgi 처리
+	if (cgi_raw.find("X-Powered-By:") != std::string::npos)
+	{
+		if (cgi_raw.substr(14, 3) == "PHP")
+			cgi_raw = cgi_raw.substr(cgi_raw.find("\r\n\r\n") + 4);
+	}
+
 	// status-line
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
 	this->status = atoi(status_line[1].c_str());
+
 
 	// Header
 	std::vector<std::string> header_line;
