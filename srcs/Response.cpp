@@ -9,11 +9,10 @@
 #include <list>
 #include <dirent.h>
 
-Response::Response() : is_writing(false)
+Response::Response()
 {
 	this->status = DEFAULT_STATUS;
 	this->client = NULL;
-	this->file_size = 0;
 	this->res_idx = 0;
 }
 
@@ -42,11 +41,6 @@ size_t Response::getResIdx(void)
 	return (this->res_idx);
 }
 
-bool Response::getWriting(void)
-{
-	return (this->is_writing);
-}
-
 void		Response::setClient(Client *client)
 {
 	this->client = client;
@@ -55,11 +49,6 @@ void		Response::setClient(Client *client)
 void Response::setResIdx(size_t res_idx)
 {
 	this->res_idx = res_idx;
-}
-
-void Response::setWriting(bool is_writing)
-{
-	this->is_writing = is_writing;
 }
 
 void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request, long to_read)
@@ -334,9 +323,7 @@ void	Response::initResponse(void)
 	this->raw_response.clear();
 	this->status = DEFAULT_STATUS;
 	this->cgi_raw.clear();
-	this->file_size = 0;
 	this->res_idx = 0;
-	this->is_writing = false;
 }
 
 void	Response::makeErrorResponse(int status, Location *location)

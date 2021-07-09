@@ -22,6 +22,8 @@ Location::Location(const Location &src)
 	this->redirect_addr = src.redirect_addr;
 }
 
+Location::~Location() {}
+
 Location &Location::operator=(const Location &src)
 {
 	this->location_name = src.location_name;

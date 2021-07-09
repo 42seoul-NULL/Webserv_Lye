@@ -15,15 +15,9 @@
 #define LOG_RESPONSE 4
 
 
-Webserver::Webserver()
-{
-	
-}
+Webserver::Webserver() {}
 
-Webserver::~Webserver()
-{
-
-}
+Webserver::~Webserver() {}
 
 void	Webserver::disconnect_client(Client &client)
 {

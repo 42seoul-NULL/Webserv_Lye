@@ -9,16 +9,24 @@ int FDType::getType()
 	return (this->type);
 }
 
+FDType::~FDType() {}
+
+
 ServerFD::ServerFD(t_FDType type)
 {
 	this->type = type;
 }
+
+ServerFD::~ServerFD() {}
+
 
 ClientFD::ClientFD(t_FDType type, Client *client)
 {
 	this->type = type;
 	this->client = client;
 }
+
+ClientFD::~ClientFD() {}
 
 Client *ClientFD::getClient(void)
 {
@@ -50,6 +58,8 @@ ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
 	this->data = NULL;
 	this->write_idx = 0;
 }
+
+ResourceFD::~ResourceFD() {}
 
 Client *ResourceFD::getClient(void)
 {
@@ -83,6 +93,8 @@ PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data
 	this->client = client;
 	this->write_idx = 0;
 }
+
+PipeFD::~PipeFD() {}
 
 Client *PipeFD::getClient(void)
 {

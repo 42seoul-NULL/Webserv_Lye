@@ -9,7 +9,6 @@ Client::Client()
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
 	this->response.setClient(this);
-	this->last_request_ms = 0;
 	this->server = NULL;
 	this->session_id = 0;
 	this->is_new_session = true;
@@ -20,21 +19,12 @@ Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_so
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
 	this->response.setClient(this);
-	this->last_request_ms = 0;
 	this->server = NULL;
 	this->session_id = 0;
 	this->is_new_session = true;
 }
 
-Client::~Client()
-{
-	
-}
-
-void	Client::setLastRequestMs(unsigned long last_request_ms)
-{
-	this->last_request_ms = last_request_ms;
-}
+Client::~Client() {}
 
 void	Client::setStatus(t_status status)
 {
@@ -93,11 +83,6 @@ Response	&Client::getResponse()
 int		Client::getSocketFd()
 {
 	return (this->socket_fd);
-}
-
-unsigned long	Client::getLastRequestMs()
-{
-	return (this->last_request_ms);
 }
 
 Server		*Client::getServer()

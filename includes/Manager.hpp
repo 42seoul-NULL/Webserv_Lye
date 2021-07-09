@@ -13,12 +13,12 @@ class FDType;
 
 class Manager
 {
-	private :
+	private:
 		Manager();
 		Manager(const Manager &src);
 		Manager& operator=(const Manager& src);
-		bool	returnFalseWithMsg(const char *str);
-		bool	isReserved(const std::string &src);
+		bool returnFalseWithMsg(const char *str);
+		bool isReserved(const std::string &src);
 
 		std::map<int, Server> server_configs;
 		static Manager*	instance;
@@ -27,22 +27,22 @@ class Manager
 
 		std::multimap<int, struct kevent> event_map;
 		Webserver webserver;
-		void	initMimeType(void);
-		void	initStatusCode(void);
+		void initMimeType(void);
+		void initStatusCode(void);
 
-	public	:
+	public:
 		virtual ~Manager();
 		static Manager* getInstance();
 		static const int decodeMimeBase64[256];
 		
-		std::map<int, Server>& getServerConfigs();
-		std::map<std::string, std::string>& getMimeType();	
-		std::map<std::string, std::string>& getStatusCode();
+		std::map<int, Server> &getServerConfigs();
+		std::map<std::string, std::string> &getMimeType();	
+		std::map<std::string, std::string> &getStatusCode();
 
-		bool	parseConfig(const char *config_file_path);
+		bool parseConfig(const char *config_file_path);
 		Webserver &getWebserver();
 		std::multimap<int, struct kevent> &getEventMap();
-		int decode_base64(const char * text, char * dst, int numBytes);
+		int decode_base64(const char *text, char *dst, int numBytes);
 
 };
 
