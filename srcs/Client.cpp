@@ -167,6 +167,7 @@ bool Client::parseSessionId(void)
 			}
 			tokens.clear();
 		}
+		++iter_first;
 	}
 	return (false);
 }

@@ -240,6 +240,11 @@ std::multimap<int, struct kevent> &Manager::getEventMap()
 	return (this->event_map);
 }
 
+std::map<int, FDType*> &Manager::getFDTable()
+{
+	return (this->fd_table);
+}
+
 int Manager::decode_base64(const char * text, char * dst, int numBytes)
 {
     const char* cp;

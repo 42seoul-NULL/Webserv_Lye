@@ -27,7 +27,7 @@ else
 	CFLAGS = -Wall -Wextra -Werror -std=c++98 ${INC}
 endif
 
-DCFLAGS = -g3 # -fsanitize=address
+DCFLAGS = -g3 -fsanitize=address -D BONUS
 
 ${NAME} : $(SRCS)
 	${CC} ${CFLAGS} ${SRCS} -o ${NAME}

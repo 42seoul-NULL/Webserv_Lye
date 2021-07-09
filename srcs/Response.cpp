@@ -359,7 +359,7 @@ void	Response::makeErrorResponse(int status, Location *location)
 			return ;
 		}
 		ResourceFD *error_resource = new ResourceFD(ERROR_RESOURCE_FDTYPE, this->client);
-		setFDonTable(fd, FD_RDONLY, error_resource, NULL);
+		setFDonTable(fd, FD_RDONLY, error_resource);
 	}
 }
 

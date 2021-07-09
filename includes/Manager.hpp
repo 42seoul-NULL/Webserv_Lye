@@ -26,6 +26,8 @@ class Manager
 		std::map<std::string, std::string> status_code;
 
 		std::multimap<int, struct kevent> event_map;
+		std::map<int, FDType*> fd_table;
+
 		Webserver webserver;
 		void initMimeType(void);
 		void initStatusCode(void);
@@ -38,10 +40,11 @@ class Manager
 		std::map<int, Server> &getServerConfigs();
 		std::map<std::string, std::string> &getMimeType();	
 		std::map<std::string, std::string> &getStatusCode();
-
-		bool parseConfig(const char *config_file_path);
 		Webserver &getWebserver();
 		std::multimap<int, struct kevent> &getEventMap();
+		std::map<int, FDType*> &getFDTable();
+
+		bool parseConfig(const char *config_file_path);
 		int decode_base64(const char *text, char *dst, int numBytes);
 
 };

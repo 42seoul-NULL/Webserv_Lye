@@ -23,9 +23,7 @@ void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	Server *server = client.getServer();
 	Client *client_pointer = &client;
-	server->getClients().erase(client_socket_fd);
 
 	std::set<int> to_delete_fds;
 
@@ -33,9 +31,9 @@ void	Webserver::disconnect_client(Client &client)
 	ResourceFD *resource_fdtype = NULL;
 	PipeFD *pipe_fdtype = NULL;
 
-	for (std::multimap<int, struct kevent>::iterator iter = MANAGER->getEventMap().begin(); iter != MANAGER->getEventMap().end(); ++iter)
+	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); ++iter)
 	{
-		fd_type = static_cast<FDType*>(iter->second.udata);
+		fd_type = static_cast<FDType*>(iter->second);
 		if ((resource_fdtype = dynamic_cast<ResourceFD*>(fd_type)))
 		{
 			if (resource_fdtype->getClient() == client_pointer)
@@ -51,6 +49,8 @@ void	Webserver::disconnect_client(Client &client)
 	for (std::set<int>::const_iterator iter = to_delete_fds.begin(); iter != to_delete_fds.end(); ++iter)
 		clrFDonTable(*iter, FD_RDWR);
 	
+	Server *server = client.getServer();
+	server->getClients().erase(client_socket_fd);
 	clrFDonTable(client_socket_fd, FD_RDWR);
 }
 
@@ -96,7 +96,7 @@ bool	Webserver::initServers(int queue_size)
 
 		// FDTable에 insert, 서버소켓은 read 와 error 만 검사.
 		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
-		setFDonTable(iter->second.getSocketFd(), FD_RDONLY, new_socket_fdtype, NULL);
+		setFDonTable(iter->second.getSocketFd(), FD_RDONLY, new_socket_fdtype);
 
 	}
 	return (true);
@@ -167,7 +167,10 @@ bool	Webserver::run(struct timespec timeout)
 		for (int i = 0; i < new_events; ++i)
 		{
 			curr_event = &this->return_events[i];
-			fd_type = static_cast<FDType*>(curr_event->udata);
+
+			if (MANAGER->getFDTable().count(curr_event->ident) == 0)
+				continue ;
+			fd_type = MANAGER->getFDTable()[curr_event->ident];
 
 			if (curr_event->flags == EV_ERROR)
 			{
@@ -435,7 +438,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		}
 
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
-		setFDonTable(get_fd, FD_RDONLY, file_fd, NULL);
+		setFDonTable(get_fd, FD_RDONLY, file_fd);
 	}
 	else if (client.getRequest().getMethod() == "PUT")
 	{
@@ -471,7 +474,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			return (500);
 		}
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client, client.getRequest().getRawBody());
-		setFDonTable(put_fd, FD_WRONLY, NULL, file_fd);
+		setFDonTable(put_fd, FD_WRONLY, file_fd);
 	}
 	else if (client.getRequest().getMethod() == "DELETE")
 	{

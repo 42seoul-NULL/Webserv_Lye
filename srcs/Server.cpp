@@ -121,9 +121,8 @@ int Server::acceptClient(int server_fd)
 	this->clients[client_socket].setServer(*this);
 
 	//fd_table 세팅
-	FDType *client_fdtype_read = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
-	FDType *client_fdtype_write = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
-	setFDonTable(client_socket, FD_RDWR, client_fdtype_read, client_fdtype_write);
+	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
+	setFDonTable(client_socket, FD_RDWR, client_fdtype);
 
 	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);

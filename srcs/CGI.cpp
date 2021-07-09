@@ -70,11 +70,11 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
-		setFDonTable(this->request_fd[1], FD_WRONLY, NULL, pipe_fd);
+		setFDonTable(this->request_fd[1], FD_WRONLY, pipe_fd);
 		
 		//reponse_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
-		setFDonTable(this->response_fd[0], FD_RDONLY, resource_fd, NULL);
+		setFDonTable(this->response_fd[0], FD_RDONLY, resource_fd);
 		return ;
 	}
 }
