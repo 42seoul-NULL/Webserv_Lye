@@ -149,21 +149,21 @@ bool	Webserver::run(struct timespec timeout)
 	struct kevent *curr_event;
 	FDType *fd_type;
 
-	while (true)
+	while (1)
 	{
-		this->monitor_events = new struct kevent[MANAGER->getEventMap().size()];
+		this->monitor_events = new struct kevent[MANAGER->getEventList().size()];
 		size_t event_idx = 0;
-		for (std::map<int, struct kevent>::const_iterator iter = MANAGER->getEventMap().begin(); iter != MANAGER->getEventMap().end(); ++iter)
+		for (std::list<struct kevent>::const_iterator iter = MANAGER->getEventList().begin(); iter != MANAGER->getEventList().end(); ++iter)
 		{
-			this->monitor_events[event_idx] = iter->second;
+			this->monitor_events[event_idx] = *iter;
 			++event_idx;
 		}
-		this->return_events = new struct kevent[MANAGER->getEventMap().size()];
 
-		new_events = kevent(this->kq, this->monitor_events, MANAGER->getEventMap().size(), this->return_events, MANAGER->getEventMap().size(), &timeout);
+		new_events = kevent(this->kq, this->monitor_events, MANAGER->getEventList().size(), this->return_events, 1024, &timeout);
 		if (new_events < 0)
 			throw strerror(errno);
-
+		
+		MANAGER->getEventList().clear();
 		for (int i = 0; i < new_events; ++i)
 		{
 			curr_event = &this->return_events[i];
@@ -330,7 +330,6 @@ bool	Webserver::run(struct timespec timeout)
 		}
 
 		delete[] this->monitor_events;
-		delete[] this->return_events;
 
 	}
 	return (true);
@@ -515,8 +514,8 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 void deleteServerResoureces(int signo)
 {
 	std::set<int> fds;
-	for (std::multimap<int, struct kevent>::const_iterator iter = MANAGER->getEventMap().begin(); iter != MANAGER->getEventMap().end(); ++iter)
-		fds.insert(iter->first);
+	for (std::list<struct kevent>::const_iterator iter = MANAGER->getEventList().begin(); iter != MANAGER->getEventList().end(); ++iter)
+		fds.insert((*iter).ident);
 
 	for (std::set<int>::const_iterator iter = fds.begin(); iter != fds.end(); ++iter)
 		clrFDonTable(*iter, FD_RDWR);

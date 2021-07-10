@@ -235,9 +235,9 @@ Webserver &Manager::getWebserver()
 	return (this->webserver);
 }
 
-std::multimap<int, struct kevent> &Manager::getEventMap()
+std::list<struct kevent> &Manager::getEventList()
 {
-	return (this->event_map);
+	return (this->event_list);
 }
 
 std::map<int, FDType*> &Manager::getFDTable()

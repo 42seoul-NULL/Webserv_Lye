@@ -28,7 +28,7 @@ class Webserver
 	private:
 		int kq;
 		struct kevent *monitor_events;
-		struct kevent *return_events;
+		struct kevent return_events[1024];
 		std::map<int, Server> servers;
 
 		void disconnect_client(Client &client);

@@ -2,6 +2,7 @@
 # define MANAGER_HPP
 
 # include <map>
+# include <list>
 # include <iostream>
 # include "utils.hpp"
 # include "Webserver.hpp"
@@ -25,7 +26,7 @@ class Manager
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
 
-		std::multimap<int, struct kevent> event_map;
+		std::list<struct kevent> event_list;
 		std::map<int, FDType*> fd_table;
 
 		Webserver webserver;
@@ -41,7 +42,7 @@ class Manager
 		std::map<std::string, std::string> &getMimeType();	
 		std::map<std::string, std::string> &getStatusCode();
 		Webserver &getWebserver();
-		std::multimap<int, struct kevent> &getEventMap();
+		std::list<struct kevent> &getEventList();
 		std::map<int, FDType*> &getFDTable();
 
 		bool parseConfig(const char *config_file_path);

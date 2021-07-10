@@ -132,19 +132,19 @@ void setFDonTable(int fd, t_fdset set, FDType *data)
 	if (set == FD_RDONLY)
 	{
 		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
-		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+		MANAGER->getEventList().push_back(event);
 	}
 	else if (set == FD_WRONLY)
 	{
 		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
-		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+		MANAGER->getEventList().push_back(event);
 	}
 	else if (set == FD_RDWR)
 	{
 		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
-		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+		MANAGER->getEventList().push_back(event);
 		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
-		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
+		MANAGER->getEventList().push_back(event);
 
 	}
 }
@@ -160,6 +160,5 @@ void clrFDonTable(int fd, t_fdset set)
 		iter->second = NULL;
 	}
 	MANAGER->getFDTable().erase(fd);
-	MANAGER->getEventMap().erase(fd);
 	close(fd);
 }
