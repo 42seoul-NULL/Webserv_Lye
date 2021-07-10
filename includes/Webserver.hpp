@@ -25,24 +25,24 @@ class Location;
 
 class Webserver
 {
-	private :
-		int		kq;
+	private:
+		int kq;
 		struct kevent *monitor_events;
 		struct kevent *return_events;
 		std::map<int, Server> servers;
 
-		void	disconnect_client(Client &client);
+		void disconnect_client(Client &client);
 		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
 
-	public	:
+	public:
 		Webserver();
 		virtual ~Webserver();
 
-		Location	&getPerfectLocation(Server &server, const std::string &uri);
-		bool		initServers(int queue_size);
-		bool		run(struct timespec timeout);
-		int 		prepareResponse(Client &client);
-		int 		prepareGeneralResponse(Client &client, Location &location);
+		Location &getPerfectLocation(Server &server, const std::string &uri);
+		bool initServers(int queue_size);
+		bool run(struct timespec timeout);
+		int prepareResponse(Client &client);
+		int prepareGeneralResponse(Client &client, Location &location);
 };
 
 void deleteServerResoureces(int signo);

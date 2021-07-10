@@ -1,6 +1,6 @@
 #include "Manager.hpp"
 #include "Webserver.hpp"
-#include "libft.hpp"
+#include "utils.hpp"
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Location.hpp"
@@ -15,33 +15,25 @@
 #define LOG_RESPONSE 4
 
 
-Webserver::Webserver()
-{
-	
-}
+Webserver::Webserver() {}
 
-Webserver::~Webserver()
-{
-
-}
+Webserver::~Webserver() {}
 
 void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	Server *server = client.getServer();
 	Client *client_pointer = &client;
-	server->getClients().erase(client_socket_fd);
 
 	std::set<int> to_delete_fds;
 
-	FDType* fd_type = NULL;
+	FDType *fd_type = NULL;
 	ResourceFD *resource_fdtype = NULL;
 	PipeFD *pipe_fdtype = NULL;
 
-	for (std::multimap<int, struct kevent>::iterator iter = MANAGER->getEventMap().begin(); iter != MANAGER->getEventMap().end(); ++iter)
+	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); ++iter)
 	{
-		fd_type = static_cast<FDType*>(iter->second.udata);
+		fd_type = static_cast<FDType*>(iter->second);
 		if ((resource_fdtype = dynamic_cast<ResourceFD*>(fd_type)))
 		{
 			if (resource_fdtype->getClient() == client_pointer)
@@ -57,6 +49,8 @@ void	Webserver::disconnect_client(Client &client)
 	for (std::set<int>::const_iterator iter = to_delete_fds.begin(); iter != to_delete_fds.end(); ++iter)
 		clrFDonTable(*iter, FD_RDWR);
 	
+	Server *server = client.getServer();
+	server->getClients().erase(client_socket_fd);
 	clrFDonTable(client_socket_fd, FD_RDWR);
 }
 
@@ -68,15 +62,20 @@ bool	Webserver::initServers(int queue_size)
 		throw strerror(errno);
 	}
 
+	struct sockaddr_in  server_addr;
+	int server_socket;
 	for (std::map<int, Server>::iterator iter = MANAGER->getServerConfigs().begin(); iter != MANAGER->getServerConfigs().end(); iter++)
 	{
-		struct sockaddr_in  server_addr;
-
-		iter->second.setSocketFd(socket(PF_INET, SOCK_STREAM, 0));
+		if ((server_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1)
+		{
+			std::cerr << "socket() error" << std::endl;
+			throw strerror(errno);
+		}
+		iter->second.setSocketFd(server_socket);
 		int option = 1;
 		setsockopt(iter->second.getSocketFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
-		ft_memset(&server_addr, 0, sizeof(server_addr));
+		memset(&server_addr, 0, sizeof(server_addr));
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_addr.s_addr = inet_addr(iter->second.getIP().c_str());
 		server_addr.sin_port = htons(iter->second.getPort());
@@ -87,14 +86,17 @@ bool	Webserver::initServers(int queue_size)
 			throw strerror(errno);
 		}
 		if (listen(iter->second.getSocketFd(), queue_size) == -1)
+		{
+			std::cerr << "listen() error" << std::endl;
 			throw strerror(errno);
+		}
 
 		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 		this->servers[iter->second.getSocketFd()] = iter->second;
 
 		// FDTable에 insert, 서버소켓은 read 와 error 만 검사.
 		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
-        setFDonTable(iter->second.getSocketFd(), FD_RDONLY, new_socket_fdtype, NULL);
+		setFDonTable(iter->second.getSocketFd(), FD_RDONLY, new_socket_fdtype);
 
 	}
 	return (true);
@@ -143,40 +145,42 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 
 bool	Webserver::run(struct timespec timeout)
 {
-    int new_events;
-    struct kevent *curr_event;
-    FDType* fd_type;
+	int new_events;
+	struct kevent *curr_event;
+	FDType *fd_type;
 
-    while (true)
-    {
-        this->monitor_events = new struct kevent[MANAGER->getEventMap().size()];
-        size_t event_idx = 0;
-        for (std::map<int, struct kevent>::const_iterator iter = MANAGER->getEventMap().begin(); iter != MANAGER->getEventMap().end(); ++iter)
+	while (true)
+	{
+		this->monitor_events = new struct kevent[MANAGER->getEventMap().size()];
+		size_t event_idx = 0;
+		for (std::map<int, struct kevent>::const_iterator iter = MANAGER->getEventMap().begin(); iter != MANAGER->getEventMap().end(); ++iter)
 		{
 			this->monitor_events[event_idx] = iter->second;
 			++event_idx;
 		}
-        this->return_events = new struct kevent[MANAGER->getEventMap().size()];
-        new_events = kevent(this->kq, this->monitor_events, MANAGER->getEventMap().size(), this->return_events, MANAGER->getEventMap().size(), &timeout);
-        if (new_events < 0)
-            throw strerror(errno);
-        for (int i = 0; i < new_events; ++i)
-        {
-            curr_event = &this->return_events[i];
-            fd_type = static_cast<FDType*>(curr_event->udata);
-            if (curr_event->flags == EV_ERROR)
-            {
-                if (fd_type->getType() == SERVER_FDTYPE)
-				{
-					// 서버 에러 - 프로그램 터짐
+		this->return_events = new struct kevent[MANAGER->getEventMap().size()];
+
+		new_events = kevent(this->kq, this->monitor_events, MANAGER->getEventMap().size(), this->return_events, MANAGER->getEventMap().size(), &timeout);
+		if (new_events < 0)
+			throw strerror(errno);
+
+		for (int i = 0; i < new_events; ++i)
+		{
+			curr_event = &this->return_events[i];
+
+			if (MANAGER->getFDTable().count(curr_event->ident) == 0)
+				continue ;
+			fd_type = MANAGER->getFDTable()[curr_event->ident];
+
+			if (curr_event->flags == EV_ERROR)
+			{
+				if (fd_type->getType() == SERVER_FDTYPE) // 서버 에러 - 프로그램 터짐
 					throw "Server Error!";
-				}
 				else if (fd_type->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
 					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd_type);
 					disconnect_client(*(client_fd->getClient()));
 					std::cerr << "client error!" << std::endl;
-					close(i);
 				}
 				else if (fd_type->getType() == RESOURCE_FDTYPE)
 				{
@@ -184,7 +188,7 @@ bool	Webserver::run(struct timespec timeout)
 					Client *client = dynamic_cast<ResourceFD*>(fd_type)->getClient();
 
 					client->getResponse().makeErrorResponse(500, NULL);
-                    clrFDonTable(curr_event->ident, FD_RDWR);
+					clrFDonTable(curr_event->ident, FD_RDWR);
 				}
 				else if (fd_type->getType() == PIPE_FDTYPE)
 				{
@@ -192,16 +196,13 @@ bool	Webserver::run(struct timespec timeout)
 					std::cerr << "pipe error!" << std::endl;
 
 					client->getResponse().makeErrorResponse(500, NULL);
-                    clrFDonTable(curr_event->ident, FD_RDWR);
+					clrFDonTable(curr_event->ident, FD_RDWR);
 				}
-            }
-            if (curr_event->filter == EVFILT_READ)
-            {
-                if (fd_type->getType() == SERVER_FDTYPE)
-                {
+			}
+			if (curr_event->filter == EVFILT_READ)
+			{
+				if (fd_type->getType() == SERVER_FDTYPE)
 					this->servers[curr_event->ident].acceptClient(curr_event->ident);
-
-                }
 				else if (fd_type->getType() == CLIENT_FDTYPE)
 				{
 					Client *client = dynamic_cast<ClientFD*>(fd_type)->getClient();
@@ -235,6 +236,7 @@ bool	Webserver::run(struct timespec timeout)
 					buf[read_size] = 0;
 					Client *client = resource_fd->getClient();
 					client->getResponse().getBody().append(buf);
+
 					if (read_size < BUFFER_SIZE)
 					{
 						client->getResponse().getHeaders().insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(client->getResponse().getBody().length())));
@@ -244,9 +246,9 @@ bool	Webserver::run(struct timespec timeout)
 						clrFDonTable(curr_event->ident, FD_RDONLY);
 					}
 				}
-            }
-            else if (curr_event->filter == EVFILT_WRITE)
-            {
+			}
+			else if (curr_event->filter == EVFILT_WRITE)
+			{
 				if (fd_type->getType() == CLIENT_FDTYPE)
 				{
 					// 클라이언트 Response write
@@ -324,13 +326,13 @@ bool	Webserver::run(struct timespec timeout)
 						clrFDonTable(curr_event->ident, FD_WRONLY);
 					}
 				}
-            }
-        }
+			}
+		}
 
-        delete[] this->monitor_events;
-        delete[] this->return_events;
+		delete[] this->monitor_events;
+		delete[] this->return_events;
 
-    }
+	}
 	return (true);
 }
 
@@ -381,11 +383,13 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 
 	if (client.getRequest().getMethod() == "GET" || client.getRequest().getMethod() == "HEAD" || client.getRequest().getMethod() == "POST")
 	{
-		if (uri.find("/cookie_test") != std::string::npos)
-		{
-			client.getResponse().makeLogResponse();
-			return (LOG_RESPONSE);
-		}
+		#ifdef BONUS
+			if (uri.find("/cookie_test") != std::string::npos)
+			{
+				client.getResponse().makeLogResponse();
+				return (LOG_RESPONSE);
+			}
+		#endif
 
 		if (uri[uri.length() - 1] != '/')
 			uri += '/';
@@ -417,18 +421,24 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			}
 			else if (res == "Index of") //autoindex list up
 			{
-				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri());
+				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri(), location);
 				return (AUTOINDEX_RESPONSE) ;
 			}
 			else
 				path = res;
-		} // 파일은 무조건 존재
+		}
 
 		client.getRequest().setPath(path);
 
 		int get_fd = open(path.c_str(), O_RDONLY);
+		if (get_fd == -1)
+		{
+			client.getResponse().makeErrorResponse(500, &location);
+			return (500);
+		}
+
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
-		setFDonTable(get_fd, FD_RDONLY, file_fd, NULL);
+		setFDonTable(get_fd, FD_RDONLY, file_fd);
 	}
 	else if (client.getRequest().getMethod() == "PUT")
 	{
@@ -456,9 +466,15 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			return (400);
 		}
 		client.getRequest().setPath(path);
+
 		int put_fd = client.getServer()->createFileWithDirectory(path);
+		if (put_fd == -1)
+		{
+			client.getResponse().makeErrorResponse(500, &location);
+			return (500);
+		}
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client, client.getRequest().getRawBody());
-		setFDonTable(put_fd, FD_WRONLY, NULL, file_fd);
+		setFDonTable(put_fd, FD_WRONLY, file_fd);
 	}
 	else if (client.getRequest().getMethod() == "DELETE")
 	{
@@ -467,7 +483,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		if (uri == location.getLocationName())
 		{
 			client.getRequest().setPath(location.getRoot());
-			client.getServer()->cleanUpLocationRoot(client, location.getRoot());
+			client.getServer()->cleanUpLocationRoot(client, location.getRoot(), location);
 			client.getResponse().makeDeleteResponse(client.getRequest());
 			return (GENERAL_RESPONSE);
 		}
@@ -479,7 +495,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			path.erase(--(path.end()));
 			if (ft_remove_directory(path.c_str()) == 1)
 			{
-				client.getResponse().makeErrorResponse(500, NULL);
+				client.getResponse().makeErrorResponse(500, &location);
 				return (500);
 			}
 		}
@@ -491,6 +507,8 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		}
 		client.getResponse().makeDeleteResponse(client.getRequest());
 	}
+	else
+		client.getResponse().makeErrorResponse(501, &location);
 	return (GENERAL_RESPONSE);
 }
 

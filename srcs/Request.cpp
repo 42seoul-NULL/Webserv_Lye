@@ -117,9 +117,6 @@ void	Request::setPath(const std::string &path)
 	this->path = path;
 }
 
-
-/////////////////////////// public func /////////////////////
-
 void	Request::initRequest(void)
 {
 	this->method.clear();
@@ -239,7 +236,7 @@ bool	Request::isComplete(void)
 
 	std::size_t len = 0;
 	if (iter !=	this->headers.end())
-		len = ft_atoi(iter->second);
+		len = atoi(iter->second.c_str());
 
 	if (this->type == CONTENT_LENGTH && this->temp_body.length() >= len)
 	{

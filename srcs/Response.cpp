@@ -1,5 +1,5 @@
 #include "Response.hpp"
-#include "libft.hpp"
+#include "utils.hpp"
 #include "Request.hpp"
 #include "Type.hpp"
 #include "Client.hpp"
@@ -9,11 +9,10 @@
 #include <list>
 #include <dirent.h>
 
-Response::Response() : seek_flag(false), is_writing(false)
+Response::Response()
 {
 	this->status = DEFAULT_STATUS;
 	this->client = NULL;
-	this->file_size = 0;
 	this->res_idx = 0;
 }
 
@@ -42,11 +41,6 @@ size_t Response::getResIdx(void)
 	return (this->res_idx);
 }
 
-bool Response::getWriting(void)
-{
-	return (this->is_writing);
-}
-
 void		Response::setClient(Client *client)
 {
 	this->client = client;
@@ -55,11 +49,6 @@ void		Response::setClient(Client *client)
 void Response::setResIdx(size_t res_idx)
 {
 	this->res_idx = res_idx;
-}
-
-void Response::setWriting(bool is_writing)
-{
-	this->is_writing = is_writing;
 }
 
 void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request, long to_read)
@@ -75,18 +64,15 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			std::cerr << "temporary resource read error!" << std::endl;
 			return ;
 		}
-		else if (read_size == 0)
-		{
-			buf[read_size] = '\0';
-			this->cgi_raw += buf;
-		}
-		else
-		{
-			buf[read_size] = '\0';
-			this->cgi_raw += buf;
+		buf[read_size] = '\0';
+		this->cgi_raw += buf;
+		if (read_size != 0)
 			return ;
-		}
 		clrFDonTable(fd, FD_RDONLY);
+		
+		while (waitpid(resource_fd->getPid(), NULL, WNOHANG) == 0)
+			std::cout << "waiting for CGI exit..." << std::endl;
+
 		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
@@ -106,6 +92,7 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		this->body += std::string(buf);
 		if (to_read - read_size > 0)
 			return ;
+
 		clrFDonTable(fd, FD_RDONLY);
 		this->status = 200;
 		this->makeResponseHeader(request);
@@ -144,11 +131,19 @@ void		Response::makeDeleteResponse(Request &request)
 
 void	Response::applyCGIResponse(std::string& cgi_raw)
 {
+	// php-cgi 처리
+	if (cgi_raw.find("X-Powered-By:") != std::string::npos)
+	{
+		if (cgi_raw.substr(14, 3) == "PHP")
+			cgi_raw = cgi_raw.substr(cgi_raw.find("\r\n\r\n") + 4);
+	}
+
 	// status-line
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
-	this->status = ft_atoi(status_line[1]);
+	this->status = atoi(status_line[1].c_str());
+
 
 	// Header
 	std::vector<std::string> header_line;
@@ -176,7 +171,9 @@ void		Response::makeResponseHeader(Request& request)
 	this->generateContentType(request);
 	this->generateServer();
 	this->generateContentLength();
-	this->generateSessionCookie();
+	#ifdef BONUS
+		this->generateSessionCookie();
+	#endif
 
 }
 
@@ -187,7 +184,10 @@ void		Response::makeCGIResponseHeader(Request& request)
 	this->generateContentLocation(request);
 	this->generateServer();
 	this->generateContentLength();
-	this->generateSessionCookie();
+
+	#ifdef BONUS
+		this->generateSessionCookie();
+	#endif
 }
 
 void	Response::generateAllow(Request& request)
@@ -250,7 +250,7 @@ void	Response::generateContentLength(void)
 void	Response::generateContentType(Request &request)
 {
 	std::string ext = request.getPath();
-	size_t pos = ext.find('.');
+	size_t pos = ext.rfind('.');
 	if (pos == std::string::npos)
 		this->headers.insert(std::pair<std::string, std::string>("Content-Type", "application/octet-stream"));
 	else
@@ -261,7 +261,7 @@ void	Response::generateContentType(Request &request)
 		else			
 		{
 			std::string type = MANAGER->getMimeType()[ext];
-			this->headers.insert(std::pair<std::string, std::string>("Content-Type", type));		
+			this->headers.insert(std::pair<std::string, std::string>("Content-Type", type));
 		}
 	}
 }
@@ -301,10 +301,9 @@ void	Response::makeRedirectResponse(Location &location)
 
 void	Response::makeStartLine()
 {
-
 	std::map<std::string, std::string>::const_iterator iter = MANAGER->getStatusCode().find(ft_itoa(this->status));
 	if (iter == MANAGER->getStatusCode().end())
-		;
+		return ;
 	this->start_line += "HTTP/1.1 ";
 	this->start_line += ft_itoa(this->status);
 	this->start_line += " ";
@@ -335,11 +334,8 @@ void	Response::initResponse(void)
 	this->body.clear();
 	this->raw_response.clear();
 	this->status = DEFAULT_STATUS;
-	this->seek_flag = false;
 	this->cgi_raw.clear();
-	this->file_size = 0;
 	this->res_idx = 0;
-	this->is_writing = false;
 }
 
 void	Response::makeErrorResponse(int status, Location *location)
@@ -356,7 +352,11 @@ void	Response::makeErrorResponse(int status, Location *location)
 			this->body.clear();
 		if (status == 401)
 			this->generateWWWAuthenticate();
-		this->generateSessionCookie();
+
+		#ifdef BONUS
+			this->generateSessionCookie();
+		#endif
+
 		this->makeStartLine();
 		this->makeRawResponse();
 		this->client->setStatus(RESPONSE_COMPLETE);
@@ -371,18 +371,18 @@ void	Response::makeErrorResponse(int status, Location *location)
 			return ;
 		}
 		ResourceFD *error_resource = new ResourceFD(ERROR_RESOURCE_FDTYPE, this->client);
-		setFDonTable(fd, FD_RDONLY, error_resource, NULL);
+		setFDonTable(fd, FD_RDONLY, error_resource);
 	}
 }
 
-void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
+void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri, Location &location)
 {
-	DIR		*dir_ptr;
-	struct dirent	*file;
+	DIR *dir_ptr;
+	struct dirent *file;
 
 	if((dir_ptr = opendir(path.c_str())) == NULL)
 	{
-		this->makeErrorResponse(500, NULL);
+		this->makeErrorResponse(500, &location);
 		return ;
 	}
 
@@ -395,7 +395,7 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 	this->body += "<hr>\r\n";
 	this->body += "<pre>\r\n";
 
-	while((file = readdir(dir_ptr)) != NULL)
+	while ((file = readdir(dir_ptr)) != NULL)
 	{
 		struct stat	sb;
 		struct tm*	timeinfo;
@@ -409,7 +409,7 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 		{
 			this->start_line.clear();
 			this->body.clear();
-			this->makeErrorResponse(500, NULL);
+			this->makeErrorResponse(500, &location);
 			return ;
 		}
 		timeinfo = localtime(&sb.st_mtime);
@@ -434,7 +434,9 @@ void	Response::makeAutoIndexResponse(std::string &path, const std::string &uri)
 	this->generateDate();
 	this->generateServer();
 	this->generateContentLength();
-	this->generateSessionCookie();
+	#ifdef BONUS
+		this->generateSessionCookie();
+	#endif
 	
 	this->makeStartLine();
 	this->makeRawResponse();

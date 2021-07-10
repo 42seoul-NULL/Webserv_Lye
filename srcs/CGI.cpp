@@ -7,46 +7,60 @@
 CGI::CGI(void)
 {
 	this->pid = 0;
-	pipe(this->request_fd);
-	pipe(this->response_fd);
 }
 
-CGI::~CGI(void)
-{
+CGI::~CGI(void) {}
 
-}
-
-void	CGI::testCGICall(Request& request, Location& location, std::string& file_name)
+void	CGI::testCGICall(Request& request, Location& location, std::string& file_name, const std::string &exec_name)
 {
+	if (pipe(this->request_fd) == -1 || pipe(this->response_fd) == -1)
+	{
+		std::cerr << "pipe() failed" << strerror(errno) << std::endl;
+		request.getClient()->getResponse().makeErrorResponse(500, &location);
+		return ;
+	}
+
 	this->pid = fork();
-	if (this->pid == 0)
+	if (this->pid < 0)
+	{
+		std::cerr << "CGI " << file_name << ": fork() error" << std::endl;
+		request.getClient()->getResponse().makeErrorResponse(500, &location);
+		return ;
+	}
+	else if (this->pid == 0)
 	{
 		std::string file_path = request.getUri();
 		file_path = file_path.substr(location.getLocationName().length());
 		file_path = location.getRoot() + file_path;
+		char *buf = realpath(file_path.c_str(), NULL);
+		if (buf != NULL)
+			file_path = std::string(buf);
+		free(buf);
+
 		char **env = this->setCGIEnvironment(request, location, file_path);
 		close(this->request_fd[1]);
 		close(this->response_fd[0]);
 		dup2(this->request_fd[0], 0);
 		dup2(this->response_fd[1], 1);
-		if (file_name.substr(file_name.find('.')) == ".php")
-		{
-			char **lst = (char **)malloc(sizeof(char *) * 3);
-			lst[0] = strdup("./php-mac/bin/php-cgi");
-			lst[1] = strdup(file_path.c_str());
-			lst[2] = NULL;
-			if (execve("./php-mac/bin/php-cgi", lst, env) == -1)
-			{
-				std::cerr << "PHP CGI EXECUTE ERROR" << std::endl;
-				exit(1);
-			}
-		}
-		else 
+
+		if (file_name.substr(file_name.rfind('.')) == ".bla")
 		{
 			char **lst = (char **)malloc(sizeof(char *) * 2);
 			lst[0] = strdup("./cgi-bin/cgi_tester");
 			lst[1] = NULL;
 			if (execve("./cgi-bin/cgi_tester", lst, env) == -1)
+			{
+				std::cerr << "CGI EXECUTE ERROR" << std::endl;
+				exit(1);
+			}
+		}
+		else
+		{
+			char **lst = (char **)malloc(sizeof(char *) * 3);
+			lst[0] = strdup(exec_name.c_str());
+			lst[1] = strdup(file_path.c_str());
+			lst[2] = NULL;
+			if (execve(exec_name.c_str(), lst, env) == -1)
 			{
 				std::cerr << "CGI EXECUTE ERROR" << std::endl;
 				exit(1);
@@ -60,13 +74,14 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		close(this->response_fd[1]);
 		fcntl(this->request_fd[1], F_SETFL, O_NONBLOCK);
 		fcntl(this->response_fd[0], F_SETFL, O_NONBLOCK);
+
 		//pipe fd fd_table에 insert
 		PipeFD *pipe_fd = new PipeFD(PIPE_FDTYPE, this->pid, request.getClient(), request.getRawBody());
-		setFDonTable(this->request_fd[1], FD_WRONLY, NULL, pipe_fd);
+		setFDonTable(this->request_fd[1], FD_WRONLY, pipe_fd);
 		
 		//reponse_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
-		setFDonTable(this->response_fd[0], FD_RDONLY, resource_fd, NULL);
+		setFDonTable(this->response_fd[0], FD_RDONLY, resource_fd);
 		return ;
 	}
 }
@@ -105,8 +120,8 @@ char	**CGI::setCGIEnvironment(Request& request, Location &location, std::string 
 		cgi_env.insert(std::pair<std::string, std::string>("CONTENT_TYPE", iter->second));
 	cgi_env.insert(std::pair<std::string, std::string>("GATEWAY_INTERFACE", "Cgi/1.1"));
 
-	std::size_t	front_pos = request.getUri().find('.');
 	std::size_t back_pos = request.getUri().find('?');
+	std::size_t	front_pos = request.getUri().rfind('.', back_pos);
 	std::string path_info = request.getUri().substr(front_pos, back_pos - front_pos);
 
 	if ((front_pos = path_info.find('/')) != std::string::npos)
@@ -171,5 +186,3 @@ char	**CGI::makeCGIEnvironment(std::map<std::string, std::string> &cgi_env)
 	env[i] = NULL;
 	return (env);
 }
-
-

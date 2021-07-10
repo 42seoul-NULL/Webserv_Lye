@@ -9,7 +9,6 @@ Client::Client()
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
 	this->response.setClient(this);
-	this->last_request_ms = 0;
 	this->server = NULL;
 	this->session_id = 0;
 	this->is_new_session = true;
@@ -20,21 +19,12 @@ Client::Client(int server_socket_fd, int socket_fd) : server_socket_fd(server_so
 	this->status = REQUEST_RECEIVING;
 	this->request.setClient(this);
 	this->response.setClient(this);
-	this->last_request_ms = 0;
 	this->server = NULL;
 	this->session_id = 0;
 	this->is_new_session = true;
 }
 
-Client::~Client()
-{
-	
-}
-
-void	Client::setLastRequestMs(unsigned long last_request_ms)
-{
-	this->last_request_ms = last_request_ms;
-}
+Client::~Client() {}
 
 void	Client::setStatus(t_status status)
 {
@@ -95,11 +85,6 @@ int		Client::getSocketFd()
 	return (this->socket_fd);
 }
 
-unsigned long	Client::getLastRequestMs()
-{
-	return (this->last_request_ms);
-}
-
 Server		*Client::getServer()
 {
 	return (this->server);
@@ -118,10 +103,9 @@ bool	Client::getSessionFlag(void)
 
 int Client::readRequest(void)
 {
-	this->setLastRequestMs(ft_get_time());
 	char buf[BUFFER_SIZE];
-
 	int readed;
+
 	readed = read(this->socket_fd, buf, BUFFER_SIZE - 1);
 	if (readed <= 0)
 	{
@@ -139,14 +123,17 @@ int Client::readRequest(void)
 
 	if (this->request.tryMakeRequest() == true)
 	{
-		if (this->parseSessionId() == false) // cookie에 session id 적혀있지 않은 경우
-		{
-			this->session_id = this->server->generateNewSession(); // session id 발급
-			this->is_new_session = true;
-		}
-		else
-			this->is_new_session = false;
-		this->server->getSessionLogs()[this->session_id].push_back(this->request.getMethod() + " " + this->request.getUri());
+		#ifdef BONUS
+			if (this->parseSessionId() == false) // cookie에 session id 적혀있지 않은 경우
+			{
+				this->session_id = this->server->generateNewSession(); // session id 발급
+				this->is_new_session = true;
+			}
+			else
+				this->is_new_session = false;
+			this->server->getSessionLogs()[this->session_id].push_back(this->request.getMethod() + " " + this->request.getUri());
+		#endif
+
 		this->status = REQUEST_COMPLETE;
 	}
 	return (1);
@@ -175,11 +162,12 @@ bool Client::parseSessionId(void)
 				if (id_pos == std::string::npos)
 					break ;
 				std::string id = (*iter).substr(id_pos + 19, (*iter).find(';', id_pos));
-				this->session_id = static_cast<size_t>(ft_atoi(id));
+				this->session_id = static_cast<size_t>(atoi(id.c_str()));
 				return (true);
 			}
 			tokens.clear();
 		}
+		++iter_first;
 	}
 	return (false);
 }

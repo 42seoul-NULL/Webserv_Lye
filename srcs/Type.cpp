@@ -9,16 +9,24 @@ int FDType::getType()
 	return (this->type);
 }
 
+FDType::~FDType() {}
+
+
 ServerFD::ServerFD(t_FDType type)
 {
 	this->type = type;
 }
+
+ServerFD::~ServerFD() {}
+
 
 ClientFD::ClientFD(t_FDType type, Client *client)
 {
 	this->type = type;
 	this->client = client;
 }
+
+ClientFD::~ClientFD() {}
 
 Client *ClientFD::getClient(void)
 {
@@ -50,6 +58,8 @@ ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
 	this->data = NULL;
 	this->write_idx = 0;
 }
+
+ResourceFD::~ResourceFD() {}
 
 Client *ResourceFD::getClient(void)
 {
@@ -84,6 +94,8 @@ PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data
 	this->write_idx = 0;
 }
 
+PipeFD::~PipeFD() {}
+
 Client *PipeFD::getClient(void)
 {
 	return (this->client);
@@ -112,25 +124,26 @@ void PipeFD::setWriteIdx(int write_idx)
 
 
 
-void setFDonTable(int fd, t_fdset set, void *read_data, void *write_data)
+void setFDonTable(int fd, t_fdset set, FDType *data)
 {
 	struct kevent event;
 
+	MANAGER->getFDTable().insert(std::pair<int, FDType*>(fd, data));
 	if (set == FD_RDONLY)
 	{
-		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, read_data);
+		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
 		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
 	}
 	else if (set == FD_WRONLY)
 	{
-		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, write_data);
+		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
 		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
 	}
 	else if (set == FD_RDWR)
 	{
-		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, read_data);
+		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
 		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
-		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, write_data);
+		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
 		MANAGER->getEventMap().insert(std::pair<int, struct kevent>(fd, event));
 
 	}
@@ -140,15 +153,13 @@ void clrFDonTable(int fd, t_fdset set)
 {
 	(void)set;
 
-	std::multimap<int, struct kevent>::iterator lower = MANAGER->getEventMap().lower_bound(fd);
-	std::multimap<int, struct kevent>::iterator upper = MANAGER->getEventMap().upper_bound(fd);
-
-	while (lower != upper)
+	std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().find(fd);
+	if (iter != MANAGER->getFDTable().end())
 	{
-		delete static_cast<FDType*>(lower->second.udata);
-		lower->second.udata = NULL;
-		++lower;
+		delete iter->second;
+		iter->second = NULL;
 	}
+	MANAGER->getFDTable().erase(fd);
 	MANAGER->getEventMap().erase(fd);
 	close(fd);
 }

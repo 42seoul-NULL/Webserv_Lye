@@ -37,7 +37,7 @@ class FDType
 	protected:
 		t_FDType type;
 	public :
-		virtual ~FDType() {}
+		virtual ~FDType();
 		int getType();
 };
 
@@ -45,7 +45,7 @@ class ServerFD : public FDType
 {
 	public :
 		ServerFD(t_FDType type);
-		~ServerFD() {}
+		~ServerFD();
 };
 
 class ClientFD : public FDType
@@ -55,7 +55,7 @@ class ClientFD : public FDType
 
 	public:
 		ClientFD(t_FDType type, Client *client);
-		~ClientFD() {}
+		~ClientFD();
 		
 		Client *getClient(void);
 };
@@ -72,7 +72,7 @@ class ResourceFD : public FDType
 		ResourceFD(t_FDType type, pid_t pid, Client *client);
 		ResourceFD(t_FDType type, Client *client);
 		ResourceFD(t_FDType type, Client *client, const std::string &data);
-		~ResourceFD() {}
+		~ResourceFD();
 
 		Client *getClient(void);
 		pid_t getPid(void);
@@ -92,7 +92,7 @@ class PipeFD : public FDType
 
 	public:
 		PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data);
-		~PipeFD() {}
+		~PipeFD();
 		
 		Client *getClient(void);
 		pid_t getPid(void);
@@ -102,7 +102,7 @@ class PipeFD : public FDType
 		void setWriteIdx(int write_idx);
 };
 
-void setFDonTable(int fd, t_fdset set, void *read_data, void *write_data);
+void setFDonTable(int fd, t_fdset set, FDType *data);
 void clrFDonTable(int fd, t_fdset set);
 
 #endif

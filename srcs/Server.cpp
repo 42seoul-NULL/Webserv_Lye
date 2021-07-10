@@ -3,7 +3,7 @@
 #include "Location.hpp"
 #include "Client.hpp"
 #include "CGI.hpp"
-#include "libft.hpp"
+#include "utils.hpp"
 #include <unistd.h>
 #include <dirent.h>
 
@@ -18,8 +18,8 @@ Server::Server(const Server& src)
 	this->port = src.port;
 	this->server_name =	src.server_name;
 	this->socket_fd = src.socket_fd;
-	this->locations.insert(src.locations.begin(), src.locations.end());
-	this->clients.insert(src.clients.begin(), src.clients.end());
+	this->locations = src.locations;
+	this->clients = src.clients;
 	this->session_count = src.session_count;
 }
 
@@ -29,9 +29,8 @@ Server &Server::operator=(const Server &src)
 	this->port	=	src.port;
 	this->server_name	=	src.server_name;
 	this->socket_fd		=	src.socket_fd;
-	this->locations.clear();
-	this->locations.insert(src.locations.begin(), src.locations.end());
-	this->clients.insert(src.clients.begin(), src.clients.end());
+	this->locations = src.locations;
+	this->clients = src.clients;
 	this->session_count = src.session_count;
 	return (*this);
 }
@@ -108,18 +107,22 @@ int Server::acceptClient(int server_fd)
 
 	std::cout << "\033[32m server connection called \033[0m" << std::endl;	
 	int client_socket = accept(server_fd, (struct sockaddr*)&client_addr, &addr_size);
+	if (client_socket == -1)
+	{
+		std::cerr << "failed to connect client" << std::endl;
+		return (-1);
+	}
+	
 	fcntl(client_socket, F_SETFL, O_NONBLOCK);
 
 	this->clients[client_socket].setServerSocketFd(server_fd);
 	this->clients[client_socket].setSocketFd(client_socket);
-	this->clients[client_socket].setLastRequestMs(ft_get_time());
 	this->clients[client_socket].setStatus(REQUEST_RECEIVING);
 	this->clients[client_socket].setServer(*this);
 
 	//fd_table 세팅
-	FDType *client_fdtype_read = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
-	FDType *client_fdtype_write = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
-	setFDonTable(client_socket, FD_RDWR, client_fdtype_read, client_fdtype_write);
+	FDType *client_fdtype = new ClientFD(CLIENT_FDTYPE, &this->clients[client_socket]);
+	setFDonTable(client_socket, FD_RDWR, client_fdtype);
 
 	std::cout << "connected client : " << client_socket << std::endl;
 	return (client_socket);
@@ -127,7 +130,7 @@ int Server::acceptClient(int server_fd)
 
 bool Server::isCgiRequest(Location &location, Request &request)
 {
-	std::vector<std::string> &cgi_extensions = location.getCgiExtensions();
+	std::map<std::string, std::string> &cgi_infos = location.getCgiInfos();
 
 	size_t dot_pos = request.getUri().find('.');
 	if (dot_pos == std::string::npos)
@@ -137,7 +140,9 @@ bool Server::isCgiRequest(Location &location, Request &request)
 		ext_end++;
 	
 	std::string res = request.getUri().substr(dot_pos, ext_end - dot_pos);
-	if (std::find(cgi_extensions.begin(), cgi_extensions.end(), res) == cgi_extensions.end())
+	
+	std::map<std::string, std::string>::const_iterator found;
+	if ((found = cgi_infos.find(res)) == cgi_infos.end())
 		return (false);
 	
 	while (request.getUri()[dot_pos] != '/')
@@ -146,7 +151,7 @@ bool Server::isCgiRequest(Location &location, Request &request)
 
 
 	CGI	cgi;
-	cgi.testCGICall(request, location, res);
+	cgi.testCGICall(request, location, res, found->second);
 	return (true);
 }
 
@@ -161,11 +166,11 @@ int    Server::createFileWithDirectory(std::string path)
     while (pos != std::string::npos)
     {
         std::string temp = path.substr(0, pos);
-        mkdir(temp.c_str(), 0777);
+        mkdir(temp.c_str(), 0644);
         n = pos + 1;
         pos = path.find("/", n);
     }
-    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0777);
+    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0644);
 	return (fd);
 }
 
@@ -192,7 +197,7 @@ bool Server::isDirectoryName(const std::string &path)
 	return (true);
 }
 
-int Server::cleanUpLocationRoot(Client &client, const std::string &root)
+int Server::cleanUpLocationRoot(Client &client, const std::string &root, Location &location)
 {
 	std::string path = root;
 	DIR *dir_ptr;
@@ -200,7 +205,7 @@ int Server::cleanUpLocationRoot(Client &client, const std::string &root)
 	if ((dir_ptr = opendir(path.c_str())) == NULL)
 	{
 		std::cerr << "opendir() error!" << std::endl;
-		client.getResponse().makeErrorResponse(500, NULL);
+		client.getResponse().makeErrorResponse(500, &location);
 		return (500);
 	}
 	if (path[path.length() - 1] != '/')
@@ -217,7 +222,7 @@ int Server::cleanUpLocationRoot(Client &client, const std::string &root)
 			ret = ft_remove_directory(path + name);
 			if (ret == 1)
 			{
-				client.getResponse().makeErrorResponse(500, NULL);
+				client.getResponse().makeErrorResponse(500, &location);
 				return (500);
 			}
 		}
