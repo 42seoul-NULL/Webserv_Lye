@@ -69,9 +69,6 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 		if (read_size != 0)
 			return ;
 		clrFDonTable(fd, FD_RDONLY);
-		
-		while (waitpid(resource_fd->getPid(), NULL, WNOHANG) == 0)
-			std::cout << "waiting for CGI exit..." << std::endl;
 
 		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
 		this->makeCGIResponseHeader(request);

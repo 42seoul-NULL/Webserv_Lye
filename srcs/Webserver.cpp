@@ -7,6 +7,7 @@
 #include "CGI.hpp"
 #include <dirent.h>
 #include <set>
+#include <csignal>
 
 #define GENERAL_RESPONSE 0
 #define CGI_RESPONSE 1
@@ -37,7 +38,11 @@ void	Webserver::disconnect_client(Client &client)
 		if ((resource_fdtype = dynamic_cast<ResourceFD*>(fd_type)))
 		{
 			if (resource_fdtype->getClient() == client_pointer)
+			{
 				to_delete_fds.insert(iter->first);
+				if (resource_fdtype->getType() == CGI_RESOURCE_FDTYPE)
+					kill(resource_fdtype->getPid(), SIGKILL);
+			}
 		}
 		else if ((pipe_fdtype = dynamic_cast<PipeFD*>(fd_type)))
 		{
@@ -149,11 +154,17 @@ bool	Webserver::run(struct timespec timeout)
 	struct kevent *curr_event;
 	FDType *fd_type;
 
+	pthread_create(&this->wait_thread, NULL, &waitThread, &MANAGER->getWaitQueue());
+	pthread_detach(this->wait_thread);
+
 	while (1)
 	{
 		new_events = kevent(this->kq, &MANAGER->getEventList()[0], MANAGER->getEventList().size(), this->return_events, 1024, &timeout);
 		if (new_events < 0)
+		{
+			std::cerr << "kevent error" << std::endl;
 			throw strerror(errno);
+		}
 		
 		MANAGER->getEventList().clear();
 		for (int i = 0; i < new_events; ++i)
@@ -289,33 +300,21 @@ bool	Webserver::run(struct timespec timeout)
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd_type);
 
-					int write_idx = pipefd->getWriteIdx();
-
-					if (pipefd->getData().length() - write_idx > BUFFER_SIZE)
-					{
-						int write_size = write(curr_event->ident, pipefd->getData().c_str() + write_idx, BUFFER_SIZE);
-						if (write_size == -1)
-						{
-							std::cerr << "temporary client write error!" << std::endl;
-							continue ;
-						}
-						pipefd->setWriteIdx(write_idx + write_size);
-						continue ;
-					}
+					if (waitpid(pipefd->getPid(), NULL, WNOHANG) != 0)
+						clrFDonTable(curr_event->ident, FD_WRONLY);
 					else
 					{
+						int write_idx = pipefd->getWriteIdx();
+
 						int write_size = write(curr_event->ident, pipefd->getData().c_str() + write_idx, pipefd->getData().length() - write_idx);
 						if (write_size == -1)
 						{
-							std::cerr << "temporary client write error!" << std::endl;
+							std::cerr << "temporary pipe write error!" << std::endl;
 							continue ;
 						}
-						if (static_cast<size_t>(write_size) < pipefd->getData().length() - write_idx)
-						{
-							pipefd->setWriteIdx(write_idx + write_size);
-							continue ;
-						}
-						clrFDonTable(curr_event->ident, FD_WRONLY);
+						pipefd->setWriteIdx(write_idx + write_size);
+						if (static_cast<size_t>(pipefd->getWriteIdx()) >= pipefd->getData().length())
+							clrFDonTable(curr_event->ident, FD_WRONLY);
 					}
 				}
 			}
@@ -516,4 +515,23 @@ void deleteServerResoureces(int signo)
 	if (signo == SIGKILL)
 		std::cout << "\n[webserv: Killed]" << std::endl;
 	exit(signo);
+}
+
+void *waitThread(void *wait_queue)
+{
+	std::queue<pid_t> *queue = static_cast<std::queue<pid_t>*>(wait_queue);
+	pid_t pid;
+	while (1)
+	{
+		usleep(1000);
+		if (!queue->empty())
+		{
+			pthread_mutex_lock(&MANAGER->getWaitQueueMutex());
+			pid = queue->front();
+			queue->pop();
+			pthread_mutex_unlock(&MANAGER->getWaitQueueMutex());
+			waitpid(pid, NULL, 0);
+		}
+	}
+	return (NULL);
 }

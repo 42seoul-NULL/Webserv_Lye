@@ -18,6 +18,7 @@
 # include <sys/types.h>
 # include <sys/event.h>
 # include <sys/time.h>
+# include <pthread.h>
 
 class Server;
 class Client;
@@ -29,6 +30,7 @@ class Webserver
 		int kq;
 		struct kevent return_events[1024];
 		std::map<int, Server> servers;
+		pthread_t wait_thread;		
 
 		void disconnect_client(Client &client);
 		const Server &getServerFromClient(int server_socket_fd, const std::string &server_name);
@@ -45,5 +47,6 @@ class Webserver
 };
 
 void deleteServerResoureces(int signo);
+void *waitThread(void *wait_queue);
 
 #endif

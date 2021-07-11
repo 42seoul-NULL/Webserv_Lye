@@ -29,6 +29,7 @@ Manager::Manager()
 {
 	this->initMimeType();
 	this->initStatusCode();
+	pthread_mutex_init(&this->wait_queue_mutex, NULL);
 }
 
 Manager::Manager(const Manager &src)
@@ -42,11 +43,7 @@ Manager &Manager::operator=(const Manager &src)
 	return (*this);
 }
 
-Manager::~Manager()
-{
-	delete (this->instance);
-	return ;
-}
+Manager::~Manager() {}
 
 Manager *Manager::getInstance()
 {
@@ -243,6 +240,16 @@ std::vector<struct kevent> &Manager::getEventList()
 std::map<int, FDType*> &Manager::getFDTable()
 {
 	return (this->fd_table);
+}
+
+std::queue<pid_t> &Manager::getWaitQueue()
+{
+	return (this->wait_queue);
+}
+
+pthread_mutex_t &Manager::getWaitQueueMutex()
+{
+	return (this->wait_queue_mutex);
 }
 
 int Manager::decode_base64(const char * text, char * dst, int numBytes)

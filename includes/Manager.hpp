@@ -3,6 +3,7 @@
 
 # include <map>
 # include <list>
+# include <queue>
 # include <iostream>
 # include "utils.hpp"
 # include "Webserver.hpp"
@@ -28,10 +29,13 @@ class Manager
 
 		std::vector<struct kevent> event_list;
 		std::map<int, FDType*> fd_table;
+		std::queue<pid_t> wait_queue;
 
 		Webserver webserver;
 		void initMimeType(void);
 		void initStatusCode(void);
+
+		pthread_mutex_t wait_queue_mutex;
 
 	public:
 		virtual ~Manager();
@@ -44,6 +48,8 @@ class Manager
 		Webserver &getWebserver();
 		std::vector<struct kevent> &getEventList();
 		std::map<int, FDType*> &getFDTable();
+		std::queue<pid_t> &getWaitQueue();
+		pthread_mutex_t &getWaitQueueMutex();
 
 		bool parseConfig(const char *config_file_path);
 		int decode_base64(const char *text, char *dst, int numBytes);

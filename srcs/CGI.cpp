@@ -82,6 +82,10 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 		//reponse_fd fd_table에 insert
 		ResourceFD *resource_fd = new ResourceFD(CGI_RESOURCE_FDTYPE, this->pid, request.getClient());
 		setFDonTable(this->response_fd[0], FD_RDONLY, resource_fd);
+
+		pthread_mutex_lock(&MANAGER->getWaitQueueMutex());
+		MANAGER->getWaitQueue().push(this->pid);
+		pthread_mutex_unlock(&MANAGER->getWaitQueueMutex());
 		return ;
 	}
 }

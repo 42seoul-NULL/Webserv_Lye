@@ -2,6 +2,12 @@
 #include "Manager.hpp"
 #include "Type.hpp"
 
+void temporary(int signo)
+{
+	(void)signo;
+	std::cout << "sigpipe" << std::endl;
+}
+
 int	main(int argc, char **argv)
 {
 	(void)argc;
@@ -15,6 +21,7 @@ int	main(int argc, char **argv)
 	{
 		signal(SIGINT, deleteServerResoureces);
 		signal(SIGKILL, deleteServerResoureces);
+		signal(SIGPIPE, temporary);
 		MANAGER->getWebserver().initServers(1024);
 		MANAGER->getWebserver().run(timeout);
 	}
