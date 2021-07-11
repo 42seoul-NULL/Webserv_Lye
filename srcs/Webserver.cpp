@@ -300,6 +300,7 @@ bool	Webserver::run(struct timespec timeout)
 					// cgi pipe에 body write
 					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd_type);
 
+					// broken pipe 처리
 					if (waitpid(pipefd->getPid(), NULL, WNOHANG) != 0)
 						clrFDonTable(curr_event->ident, FD_WRONLY);
 					else
@@ -313,7 +314,7 @@ bool	Webserver::run(struct timespec timeout)
 							continue ;
 						}
 						pipefd->setWriteIdx(write_idx + write_size);
-						if (static_cast<size_t>(pipefd->getWriteIdx()) >= pipefd->getData().length())
+						if (pipefd->getWriteIdx() >= pipefd->getData().length())
 							clrFDonTable(curr_event->ident, FD_WRONLY);
 					}
 				}

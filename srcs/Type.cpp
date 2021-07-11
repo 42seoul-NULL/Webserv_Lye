@@ -111,12 +111,12 @@ const std::string &PipeFD::getData()
 	return (this->data);
 }
 
-int PipeFD::getWriteIdx()
+size_t PipeFD::getWriteIdx()
 {
 	return (this->write_idx);
 }
 
-void PipeFD::setWriteIdx(int write_idx)
+void PipeFD::setWriteIdx(size_t write_idx)
 {
 	this->write_idx = write_idx;
 }
