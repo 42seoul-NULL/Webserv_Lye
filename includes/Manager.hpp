@@ -26,7 +26,7 @@ class Manager
 		std::map<std::string, std::string> mime_type;
 		std::map<std::string, std::string> status_code;
 
-		std::list<struct kevent> event_list;
+		std::vector<struct kevent> event_list;
 		std::map<int, FDType*> fd_table;
 
 		Webserver webserver;
@@ -42,7 +42,7 @@ class Manager
 		std::map<std::string, std::string> &getMimeType();	
 		std::map<std::string, std::string> &getStatusCode();
 		Webserver &getWebserver();
-		std::list<struct kevent> &getEventList();
+		std::vector<struct kevent> &getEventList();
 		std::map<int, FDType*> &getFDTable();
 
 		bool parseConfig(const char *config_file_path);

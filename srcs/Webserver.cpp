@@ -151,15 +151,7 @@ bool	Webserver::run(struct timespec timeout)
 
 	while (1)
 	{
-		this->monitor_events = new struct kevent[MANAGER->getEventList().size()];
-		size_t event_idx = 0;
-		for (std::list<struct kevent>::const_iterator iter = MANAGER->getEventList().begin(); iter != MANAGER->getEventList().end(); ++iter)
-		{
-			this->monitor_events[event_idx] = *iter;
-			++event_idx;
-		}
-
-		new_events = kevent(this->kq, this->monitor_events, MANAGER->getEventList().size(), this->return_events, 1024, &timeout);
+		new_events = kevent(this->kq, &MANAGER->getEventList()[0], MANAGER->getEventList().size(), this->return_events, 1024, &timeout);
 		if (new_events < 0)
 			throw strerror(errno);
 		
@@ -328,8 +320,6 @@ bool	Webserver::run(struct timespec timeout)
 				}
 			}
 		}
-
-		delete[] this->monitor_events;
 
 	}
 	return (true);
@@ -514,8 +504,9 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 void deleteServerResoureces(int signo)
 {
 	std::set<int> fds;
-	for (std::list<struct kevent>::const_iterator iter = MANAGER->getEventList().begin(); iter != MANAGER->getEventList().end(); ++iter)
-		fds.insert((*iter).ident);
+
+	for (std::map<int, FDType*>::const_iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); ++iter)
+		fds.insert(iter->first);
 
 	for (std::set<int>::const_iterator iter = fds.begin(); iter != fds.end(); ++iter)
 		clrFDonTable(*iter, FD_RDWR);

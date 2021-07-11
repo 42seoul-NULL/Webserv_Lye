@@ -235,7 +235,7 @@ Webserver &Manager::getWebserver()
 	return (this->webserver);
 }
 
-std::list<struct kevent> &Manager::getEventList()
+std::vector<struct kevent> &Manager::getEventList()
 {
 	return (this->event_list);
 }
