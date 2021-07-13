@@ -50,7 +50,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 			lst[1] = NULL;
 			if (execve("./cgi-bin/cgi_tester", lst, env) == -1)
 			{
-				std::cerr << "CGI EXECUTE ERROR" << std::endl;
+				std::cerr << "CGI EXECUTE ERROR: " << strerror(errno) << std::endl;
 				exit(1);
 			}
 		}
@@ -62,7 +62,7 @@ void	CGI::testCGICall(Request& request, Location& location, std::string& file_na
 			lst[2] = NULL;
 			if (execve(exec_name.c_str(), lst, env) == -1)
 			{
-				std::cerr << "CGI EXECUTE ERROR" << std::endl;
+				std::cerr << "CGI EXECUTE ERROR: " << strerror(errno) << std::endl;
 				exit(1);
 			}
 		}

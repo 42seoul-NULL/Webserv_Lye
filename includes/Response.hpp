@@ -40,7 +40,7 @@ class Response
 		void tryMakeResponse(ResourceFD *resource_fd, int fd, Request& request, long to_read);
 		void makePutResponse(Request &request);
 		void makeDeleteResponse(Request &request);
-		void applyCGIResponse(std::string& raw);
+		bool applyCGIResponse(std::string& raw);
 		void makeResponseHeader(Request &request);
 		void makeCGIResponseHeader(Request& request);
 		void generateAllow(Request& request);

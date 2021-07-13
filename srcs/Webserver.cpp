@@ -340,7 +340,8 @@ int Webserver::prepareResponse(Client &client)
 	}
 
 	// Allowed Method인지 체크 - 405
-	if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
+	if (!location.getAllowMethods().empty() && 
+		std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
 	{
 		client.getResponse().makeErrorResponse(405, &location);
 		return (405);

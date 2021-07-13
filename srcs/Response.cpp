@@ -70,7 +70,9 @@ void		Response::tryMakeResponse(ResourceFD *resource_fd, int fd, Request& reques
 			return ;
 		clrFDonTable(fd, FD_RDONLY);
 
-		this->applyCGIResponse(this->cgi_raw); // status, content_type, body
+		// status, content_type, body
+		if (this->applyCGIResponse(this->cgi_raw) == false)
+			return ;
 		this->makeCGIResponseHeader(request);
 		this->makeStartLine();
 		this->makeRawResponse();
@@ -126,7 +128,7 @@ void		Response::makeDeleteResponse(Request &request)
 	this->client->setStatus(RESPONSE_COMPLETE);
 }
 
-void	Response::applyCGIResponse(std::string& cgi_raw)
+bool	Response::applyCGIResponse(std::string& cgi_raw)
 {
 	// php-cgi 처리
 	if (cgi_raw.find("X-Powered-By:") != std::string::npos)
@@ -139,6 +141,11 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 	std::vector<std::string> status_line;
 	std::size_t status_sep = cgi_raw.find("\r\n");
 	ft_split(cgi_raw.substr(0, status_sep), " ", status_line);
+	if (status_line.size() < 2)
+	{
+		this->makeErrorResponse(500, NULL);
+		return (false);
+	}
 	this->status = atoi(status_line[1].c_str());
 
 
@@ -155,6 +162,7 @@ void	Response::applyCGIResponse(std::string& cgi_raw)
 		this->body = cgi_raw.substr(header_sep + 4);
 	else
 		this->body = "";
+	return (true);
 }
 
 
