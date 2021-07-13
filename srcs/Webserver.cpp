@@ -264,7 +264,8 @@ bool	Webserver::run(struct timespec timeout)
 						int write_size = write(curr_event->ident, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
 						if (write_size == -1)
 						{
-							std::cerr << "temporary client write error!" << std::endl;
+							this->disconnect_client(*client);
+							std::cout << "disconnected: " << curr_event->ident << std::endl;
 							continue ;
 						}
 						client->getResponse().setResIdx(res_idx + write_size);

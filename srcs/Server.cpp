@@ -166,11 +166,11 @@ int    Server::createFileWithDirectory(std::string path)
     while (pos != std::string::npos)
     {
         std::string temp = path.substr(0, pos);
-        mkdir(temp.c_str(), 0644);
+        mkdir(temp.c_str(), 0755);
         n = pos + 1;
         pos = path.find("/", n);
     }
-    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0644);
+    fd = open(path.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0755);
 	return (fd);
 }
 

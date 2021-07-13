@@ -114,7 +114,7 @@ int Client::readRequest(void)
 		else
 		{
 			std::cerr << "client read error!" << std::endl;
-			return (1);
+			return (DISCONNECT_CLIENT);
 		}
 	}
 	buf[readed] = 0;
