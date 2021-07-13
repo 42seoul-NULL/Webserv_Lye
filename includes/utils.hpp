@@ -1,10 +1,9 @@
 #ifndef UTILS_HPP
 # define UTILS_HPP
 
-# include <stdlib.h>
+# include <cstdlib>
 # include <fcntl.h>
 # include <unistd.h>
-# include <stddef.h>
 # include <sys/time.h>
 # include <string>
 # include <vector>

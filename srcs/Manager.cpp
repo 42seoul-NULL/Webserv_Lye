@@ -1,4 +1,4 @@
-#include "../includes/Manager.hpp"
+#include "Manager.hpp"
 #include "Location.hpp"
 #include "Type.hpp"
 #include <fstream>
