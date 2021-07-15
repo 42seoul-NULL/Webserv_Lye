@@ -1,6 +1,7 @@
-#include "../includes/Manager.hpp"
+#include "Manager.hpp"
 #include "Location.hpp"
 #include "Type.hpp"
+#include <fstream>
 
 
 Manager* Manager::instance;
@@ -28,6 +29,7 @@ Manager::Manager()
 {
 	this->initMimeType();
 	this->initStatusCode();
+	pthread_mutex_init(&this->wait_queue_mutex, NULL);
 }
 
 Manager::Manager(const Manager &src)
@@ -41,11 +43,7 @@ Manager &Manager::operator=(const Manager &src)
 	return (*this);
 }
 
-Manager::~Manager()
-{
-	delete (this->instance);
-	return ;
-}
+Manager::~Manager() {}
 
 Manager *Manager::getInstance()
 {
@@ -75,15 +73,6 @@ std::map<std::string, std::string> &Manager::getStatusCode()
 	return (this->status_code);
 }
 
-void	Manager::deleteFromFDTable(int fd, FDType *fd_type, t_fdset set)
-{
-	delete fd_type;
-	MANAGER->getFDTable()[fd] = NULL;
-	MANAGER->getFDTable().erase(fd);
-	clrFDonTable(fd, set);
-	close(fd);
-}
-
 bool	Manager::isReserved(const std::string &src)
 {
 	if (src == "server" || 
@@ -98,7 +87,7 @@ bool	Manager::isReserved(const std::string &src)
 		src == "auto_index" ||
 		src == "request_max_body_size" ||
 		src == "auth_key" ||
-		src == "cgi_extension" ||
+		src == "cgi_info" ||
 		src == "return" ||
 		src == "}" ||
 		src == "{" )
@@ -108,24 +97,24 @@ bool	Manager::isReserved(const std::string &src)
 
 bool	Manager::parseConfig(const char *config_file_path)
 {
-	int				fd;
 	std::string		line;
-	int				ret;
-	std::string		splited;
 	std::vector<std::string> vec;
 	int key;
 	std::string		location_name;
+	std::ifstream fin;
 
-	fd = open(config_file_path, O_RDONLY);
-	if (fd < 3)
+	fin.open(config_file_path, std::ifstream::in);
+
+	if (!fin.is_open())
 		return (returnFalseWithMsg("Can't open Config file"));
 	try
 	{
-		while ( (ret = get_next_line(fd, line)) > 0)
+		while (1)
 		{
-			if (line == "")
-				continue ;
-			splited = ft_split(line, " \t", vec);
+			std::getline(fin, line);
+			if (fin.eof())
+				break ;
+			ft_split(line, " \t", vec);
 			line.clear();
 		}
 
@@ -137,7 +126,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 				std::string server_name = *iter;
 				iter++; // listen
 				iter++; // 8080
-				key = ft_atoi(*iter);
+				key = atoi((*iter).c_str());
 				iter++; // 127.0.0.1
 				if (instance->server_configs.find(key) != instance->server_configs.end()) // 이미 존재
 					throw "server_name and port already exists";
@@ -154,7 +143,7 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "error_page")
 			{
 				iter++;
-				int key2 = ft_atoi(*iter);
+				int key2 = atoi((*iter).c_str());
 				iter++;
 				instance->server_configs[key].getLocations()[location_name].getErrorPages()[key2] = *iter;
 			}
@@ -203,12 +192,16 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "request_max_body_size")
 			{
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].setRequestMaxBodySize(ft_atoi(*iter));
+				instance->server_configs[key].getLocations()[location_name].setRequestMaxBodySize(atoi((*iter).c_str()));
 			}
-			else if (*iter == "cgi_extension")
+			else if (*iter == "cgi_info")
 			{
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].getCgiExtensions().push_back(*iter);
+				std::pair<std::string, std::string> cgi_info;
+				cgi_info.first = *iter;
+				iter++;
+				cgi_info.second = *iter;
+				instance->server_configs[key].getLocations()[location_name].getCgiInfos().insert(cgi_info);
 			}
 			else if (*iter == "auth_key")
 			{
@@ -218,25 +211,20 @@ bool	Manager::parseConfig(const char *config_file_path)
 			else if (*iter == "return")
 			{
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].setRedirectReturn(ft_atoi(*iter));
+				instance->server_configs[key].getLocations()[location_name].setRedirectReturn(atoi((*iter).c_str()));
 				iter++;
-				instance->server_configs[key].getLocations()[location_name].setRedirectAddr(*iter);				
+				instance->server_configs[key].getLocations()[location_name].setRedirectAddr(*iter);	
 			}
 		}
 	}
 	catch(const char *e)
 	{
 		std::cout << e << std::endl;
-		close(fd);
+		fin.close();
 		return (false);
 	}
-	close(fd);
+	fin.close();
 	return (true);	
-}
-
-std::map<int, FDType *> &Manager::getFDTable()
-{
-	return (this->fd_table);
 }
 
 Webserver &Manager::getWebserver()
@@ -244,19 +232,24 @@ Webserver &Manager::getWebserver()
 	return (this->webserver);
 }
 
-fd_set &Manager::getReads(void)
+std::vector<struct kevent> &Manager::getEventList()
 {
-	return (this->reads);
+	return (this->event_list);
 }
 
-fd_set &Manager::getWrites(void)
+std::map<int, FDType*> &Manager::getFDTable()
 {
-	return (this->writes);
+	return (this->fd_table);
 }
 
-fd_set &Manager::getErrors(void)
+std::queue<pid_t> &Manager::getWaitQueue()
 {
-	return (this->errors);
+	return (this->wait_queue);
+}
+
+pthread_mutex_t &Manager::getWaitQueueMutex()
+{
+	return (this->wait_queue_mutex);
 }
 
 int Manager::decode_base64(const char * text, char * dst, int numBytes)

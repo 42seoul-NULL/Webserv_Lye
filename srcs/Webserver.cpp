@@ -1,113 +1,86 @@
 #include "Manager.hpp"
 #include "Webserver.hpp"
-#include "libft.hpp"
+#include "utils.hpp"
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Location.hpp"
 #include "CGI.hpp"
 #include <dirent.h>
+#include <set>
+#include <csignal>
 
 #define GENERAL_RESPONSE 0
 #define CGI_RESPONSE 1
 #define REDIRECT_RESPONSE 2
 #define AUTOINDEX_RESPONSE 3
+#define LOG_RESPONSE 4
 
-Webserver::Webserver() : fd_max(-1)
-{
-	
-}
 
-Webserver::~Webserver()
-{
+Webserver::Webserver() {}
 
-}
-
-Webserver::Webserver(const Webserver &src)
-{
-	this->fd_max = src.fd_max;
-	this->servers.insert(src.servers.begin(), src.servers.end());
-}
-
-Webserver& Webserver::operator=(const Webserver &src)
-{
-	this->fd_max = src.fd_max;
-	this->servers.clear();
-	this->servers.insert(src.servers.begin(), src.servers.end());
-	return (*this);
-}
-
-void	Webserver::setFDMax(int fd_max)
-{
-	this->fd_max = fd_max;
-}
-
-int		Webserver::getFDMax(void)
-{
-	return (this->fd_max);
-}
+Webserver::~Webserver() {}
 
 void	Webserver::disconnect_client(Client &client)
 {
 	int client_socket_fd = client.getSocketFd();
 
-	Server *server = client.getServer();
 	Client *client_pointer = &client;
-	server->getClients().erase(client_socket_fd);
 
+	std::set<int> to_delete_fds;
+
+	FDType *fd_type = NULL;
 	ResourceFD *resource_fdtype = NULL;
 	PipeFD *pipe_fdtype = NULL;
-	std::map<int, FDType*>::iterator temp;
-	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); )
+
+	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); ++iter)
 	{
-		if ((resource_fdtype = dynamic_cast<ResourceFD *>(iter->second)))
+		fd_type = static_cast<FDType*>(iter->second);
+		if ((resource_fdtype = dynamic_cast<ResourceFD*>(fd_type)))
 		{
 			if (resource_fdtype->getClient() == client_pointer)
 			{
-				clrFDonTable(iter->first, FD_RDWR);
-				close(iter->first);
-				delete resource_fdtype;
-				temp = iter;
-				temp++;
-				MANAGER->getFDTable().erase(iter->first);
-				iter = temp;
-				continue;
+				to_delete_fds.insert(iter->first);
+				if (resource_fdtype->getType() == CGI_RESOURCE_FDTYPE)
+					kill(resource_fdtype->getPid(), SIGKILL);
 			}
 		}
-		else if ((pipe_fdtype = dynamic_cast<PipeFD *>(iter->second)))
+		else if ((pipe_fdtype = dynamic_cast<PipeFD*>(fd_type)))
 		{
 			if (pipe_fdtype->getClient() == client_pointer)
-			{
-				clrFDonTable(iter->first, FD_RDWR);
-				close(iter->first);
-				delete pipe_fdtype;
-				temp = iter;
-				temp++;
-				MANAGER->getFDTable().erase(iter->first);
-				iter = temp;
-				continue;
-			}
+				to_delete_fds.insert(iter->first);
 		}
-		iter++;
 	}
 
-	MANAGER->deleteFromFDTable(client_socket_fd, MANAGER->getFDTable()[client_socket_fd], FD_RDWR);
+	for (std::set<int>::const_iterator iter = to_delete_fds.begin(); iter != to_delete_fds.end(); ++iter)
+		clrFDonTable(*iter, FD_RDWR);
+	
+	Server *server = client.getServer();
+	server->getClients().erase(client_socket_fd);
+	clrFDonTable(client_socket_fd, FD_RDWR);
 }
 
 bool	Webserver::initServers(int queue_size)
 {
-	FT_FD_ZERO(&(MANAGER->getReads()));
-	FT_FD_ZERO(&(MANAGER->getWrites()));
-	FT_FD_ZERO(&(MANAGER->getErrors()));
+	if ((this->kq = kqueue()) == -1)
+	{
+		std::cerr << "kqueue() error" << std::endl;
+		throw strerror(errno);
+	}
 
+	struct sockaddr_in  server_addr;
+	int server_socket;
 	for (std::map<int, Server>::iterator iter = MANAGER->getServerConfigs().begin(); iter != MANAGER->getServerConfigs().end(); iter++)
 	{
-		struct sockaddr_in  server_addr;
-
-		iter->second.setSocketFd(socket(PF_INET, SOCK_STREAM, 0));
+		if ((server_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1)
+		{
+			std::cerr << "socket() error" << std::endl;
+			throw strerror(errno);
+		}
+		iter->second.setSocketFd(server_socket);
 		int option = 1;
 		setsockopt(iter->second.getSocketFd(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(int));
 
-		ft_memset(&server_addr, 0, sizeof(server_addr));
+		memset(&server_addr, 0, sizeof(server_addr));
 		server_addr.sin_family = AF_INET;
 		server_addr.sin_addr.s_addr = inet_addr(iter->second.getIP().c_str());
 		server_addr.sin_port = htons(iter->second.getPort());
@@ -118,18 +91,18 @@ bool	Webserver::initServers(int queue_size)
 			throw strerror(errno);
 		}
 		if (listen(iter->second.getSocketFd(), queue_size) == -1)
+		{
+			std::cerr << "listen() error" << std::endl;
 			throw strerror(errno);
+		}
 
 		std::cout << "Server " << iter->second.getServerName() << "(" << iter->second.getIP() << ":" << iter->second.getPort() << ") started" << std::endl;
 		this->servers[iter->second.getSocketFd()] = iter->second;
 
-		// FDTable에 insert
+		// FDTable에 insert, 서버소켓은 read 와 error 만 검사.
 		FDType *new_socket_fdtype = new ServerFD(SERVER_FDTYPE);
-		MANAGER->getFDTable().insert(std::pair<int, FDType*>(iter->second.getSocketFd(), new_socket_fdtype));
-		// 서버소켓은 read 와 error 만 검사.
-		setFDonTable(iter->second.getSocketFd(), FD_RDONLY);
-		if (this->fd_max < iter->second.getSocketFd())
-			this->fd_max = iter->second.getSocketFd();
+		setFDonTable(iter->second.getSocketFd(), FD_RDONLY, new_socket_fdtype);
+
 	}
 	return (true);
 }
@@ -175,69 +148,89 @@ Location &Webserver::getPerfectLocation(Server &server, const std::string &uri)
 	return (*ret);
 }
 
-bool	Webserver::run(struct timeval timeout)
+bool	Webserver::run(struct timespec timeout)
 {
-	fd_set	cpy_reads;
-	fd_set	cpy_writes;
-	fd_set	cpy_errors;
+	int new_events;
+	struct kevent *curr_event;
+	FDType *fd_type;
 
-	int fd_num;
+	pthread_create(&this->wait_thread, NULL, &waitThread, &MANAGER->getWaitQueue());
+	pthread_detach(this->wait_thread);
 
 	while (1)
 	{
-		usleep(5); // cpu 점유가 100% 까지 올라가는 것을 막기 위해서
-
-		cpy_reads = MANAGER->getReads();
-		cpy_writes = MANAGER->getWrites();
-		cpy_errors = MANAGER->getErrors();
-
-		if ( (fd_num = select(this->fd_max + 1, &cpy_reads, &cpy_writes, &cpy_errors, &timeout)) == -1)
+		new_events = kevent(this->kq, &MANAGER->getEventList()[0], MANAGER->getEventList().size(), this->return_events, 1024, &timeout);
+		if (new_events < 0)
+		{
+			std::cerr << "kevent error" << std::endl;
 			throw strerror(errno);
-
-		if (fd_num == 0)
-			continue ;
+		}
 		
-		FDType *fd = NULL;
-		for (int i = 0; i <= this->fd_max; i++)
-		{	
-			if (MANAGER->getFDTable().count(i) == 0) // fd_table에 없는 fd라면 continue
-				continue ;
-			fd = MANAGER->getFDTable()[i];
+		MANAGER->getEventList().clear();
+		for (int i = 0; i < new_events; ++i)
+		{
+			curr_event = &this->return_events[i];
 
-			if (FT_FD_ISSET(i, &cpy_reads))
+			if (MANAGER->getFDTable().count(curr_event->ident) == 0)
+				continue ;
+			fd_type = MANAGER->getFDTable()[curr_event->ident];
+
+			if (curr_event->flags == EV_ERROR)
 			{
-				if (fd->getType() == SERVER_FDTYPE)
+				if (fd_type->getType() == SERVER_FDTYPE) // 서버 에러 - 프로그램 터짐
+					throw "Server Error!";
+				else if (fd_type->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
 				{
-					int client_socket_fd = this->servers[i].acceptClient(i, this->fd_max);
-					setFDonTable(client_socket_fd, FD_RDWR);
-					if (this->fd_max < client_socket_fd)
-						this->fd_max = client_socket_fd;
+					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd_type);
+					disconnect_client(*(client_fd->getClient()));
+					std::cerr << "client error!" << std::endl;
 				}
-				else if (fd->getType() == CLIENT_FDTYPE)
+				else if (fd_type->getType() == RESOURCE_FDTYPE)
 				{
-					Client *client = dynamic_cast<ClientFD *>(fd)->getClient();
+					std::cerr << "resource error!" << std::endl;
+					Client *client = dynamic_cast<ResourceFD*>(fd_type)->getClient();
+
+					client->getResponse().makeErrorResponse(500, NULL);
+					clrFDonTable(curr_event->ident, FD_RDWR);
+				}
+				else if (fd_type->getType() == PIPE_FDTYPE)
+				{
+					Client *client = dynamic_cast<ResourceFD*>(fd_type)->getClient();
+					std::cerr << "pipe error!" << std::endl;
+
+					client->getResponse().makeErrorResponse(500, NULL);
+					clrFDonTable(curr_event->ident, FD_RDWR);
+				}
+			}
+			if (curr_event->filter == EVFILT_READ)
+			{
+				if (fd_type->getType() == SERVER_FDTYPE)
+					this->servers[curr_event->ident].acceptClient(curr_event->ident);
+				else if (fd_type->getType() == CLIENT_FDTYPE)
+				{
+					Client *client = dynamic_cast<ClientFD*>(fd_type)->getClient();
 
 					if (client->readRequest() == DISCONNECT_CLIENT)
 					{
-						disconnect_client(*client);
-						std::cout << "disconnected: " << i << std::endl;
+						this->disconnect_client(*client);
+						std::cout << "disconnected: " << curr_event->ident << std::endl;
 						continue ;
 					}
 					if (client->getStatus() == REQUEST_COMPLETE)
 						this->prepareResponse(*client);
 				}
-				else if (fd->getType() == RESOURCE_FDTYPE || fd->getType() == CGI_RESOURCE_FDTYPE)
+				else if (fd_type->getType() == RESOURCE_FDTYPE || fd_type->getType() == CGI_RESOURCE_FDTYPE)
 				{
-					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
-					resource_fd->getClient()->getResponse().tryMakeResponse(resource_fd, i, resource_fd->getClient()->getRequest());
+					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd_type);
+					resource_fd->getClient()->getResponse().tryMakeResponse(resource_fd, curr_event->ident, resource_fd->getClient()->getRequest(), curr_event->data);
 				}
-				else if (fd->getType() == ERROR_RESOURCE_FDTYPE)
+				else if (fd_type->getType() == ERROR_RESOURCE_FDTYPE)
 				{
 					char buf[BUFFER_SIZE + 1];
 					int read_size;
-					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
+					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd_type);
 
-					read_size = read(i, buf, BUFFER_SIZE);
+					read_size = read(curr_event->ident, buf, BUFFER_SIZE);
 					if (read_size == -1)
 					{
 						std::cerr << "temporary resource read error!" << std::endl;
@@ -246,31 +239,33 @@ bool	Webserver::run(struct timeval timeout)
 					buf[read_size] = 0;
 					Client *client = resource_fd->getClient();
 					client->getResponse().getBody().append(buf);
+
 					if (read_size < BUFFER_SIZE)
 					{
 						client->getResponse().getHeaders().insert(std::pair<std::string, std::string>("Content-Length", ft_itoa(client->getResponse().getBody().length())));
 						client->getResponse().makeStartLine();
 						client->getResponse().makeRawResponse();
 						client->setStatus(RESPONSE_COMPLETE);
-						MANAGER->deleteFromFDTable(i, fd, FD_RDONLY);
+						clrFDonTable(curr_event->ident, FD_RDONLY);
 					}
 				}
 			}
-			else if (FT_FD_ISSET(i, &cpy_writes))
+			else if (curr_event->filter == EVFILT_WRITE)
 			{
-				if (fd->getType() == CLIENT_FDTYPE)
+				if (fd_type->getType() == CLIENT_FDTYPE)
 				{
 					// 클라이언트 Response write
 					// 다른 곳에서 응답 raw_data 다 준비해놓고 여기서는 write 및 clear()만
-					Client *client = dynamic_cast<ClientFD *>(fd)->getClient();
+					Client *client = dynamic_cast<ClientFD *>(fd_type)->getClient();
 
 					if (client->getStatus() == RESPONSE_COMPLETE)
 					{
 						size_t res_idx = client->getResponse().getResIdx();
-						int write_size = write(i, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
+						int write_size = write(curr_event->ident, client->getResponse().getRawResponse().c_str() + res_idx, client->getResponse().getRawResponse().length() - res_idx);
 						if (write_size == -1)
 						{
-							std::cerr << "temporary client write error!" << std::endl;
+							this->disconnect_client(*client);
+							std::cout << "disconnected: " << curr_event->ident << std::endl;
 							continue ;
 						}
 						client->getResponse().setResIdx(res_idx + write_size);
@@ -282,13 +277,13 @@ bool	Webserver::run(struct timeval timeout)
 						}
 					}
 				}
-				else if (fd->getType() == RESOURCE_FDTYPE)
+				else if (fd_type->getType() == RESOURCE_FDTYPE)
 				{
 					// resource write - PUT
-					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd);
+					ResourceFD *resource_fd = dynamic_cast<ResourceFD *>(fd_type);
 
 					size_t write_idx = resource_fd->getWriteIdx();
-					int write_size = write(i, resource_fd->getData().c_str() + write_idx, resource_fd->getData().length() - write_idx);
+					int write_size = write(curr_event->ident, resource_fd->getData().c_str() + write_idx, resource_fd->getData().length() - write_idx);
 					if (write_size == -1)
 					{
 						std::cerr << "temporary resource write error!" << std::endl;
@@ -298,77 +293,35 @@ bool	Webserver::run(struct timeval timeout)
 					if (resource_fd->getWriteIdx() >= resource_fd->getData().length())
 					{
 						resource_fd->getClient()->getResponse().makePutResponse(resource_fd->getClient()->getRequest());
-						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
+						clrFDonTable(curr_event->ident, FD_WRONLY);
 					}
 				}
-				else if (fd->getType() == PIPE_FDTYPE)
+				else if (fd_type->getType() == PIPE_FDTYPE)
 				{
 					// cgi pipe에 body write
-					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd);
+					PipeFD *pipefd = dynamic_cast<PipeFD *>(fd_type);
 
-					int write_idx = pipefd->getWriteIdx();
-
-					if (pipefd->getData().length() - write_idx > BUFFER_SIZE)
+					// broken pipe 처리
+					if (waitpid(pipefd->getPid(), NULL, WNOHANG) != 0)
+						clrFDonTable(curr_event->ident, FD_WRONLY);
+					else
 					{
-						int write_size = write(i, pipefd->getData().c_str() + write_idx, BUFFER_SIZE);
+						int write_idx = pipefd->getWriteIdx();
+
+						int write_size = write(curr_event->ident, pipefd->getData().c_str() + write_idx, pipefd->getData().length() - write_idx);
 						if (write_size == -1)
 						{
-							std::cerr << "temporary client write error!" << std::endl;
+							std::cerr << "temporary pipe write error!" << std::endl;
 							continue ;
 						}
 						pipefd->setWriteIdx(write_idx + write_size);
-						continue ;
+						if (pipefd->getWriteIdx() >= pipefd->getData().length())
+							clrFDonTable(curr_event->ident, FD_WRONLY);
 					}
-					else
-					{
-						int write_size = write(i, pipefd->getData().c_str() + write_idx, pipefd->getData().length() - write_idx);
-						if (write_size == -1)
-						{
-							std::cerr << "temporary client write error!" << std::endl;
-							continue ;
-						}
-						if (static_cast<size_t>(write_size) < pipefd->getData().length() - write_idx)
-						{
-							pipefd->setWriteIdx(write_idx + write_size);
-							continue ;
-						}
-						close(pipefd->getFdRead());
-						MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
-					}
-				}
-			}
-			else if (FT_FD_ISSET(i, &cpy_errors))
-			{
-				if (fd->getType() == SERVER_FDTYPE)
-				{
-					// 서버 에러 - 프로그램 터짐
-					throw "Server Error!";
-				}
-				else if (fd->getType() == CLIENT_FDTYPE) // 클라이언트 에러 - 연결 해제
-				{
-					ClientFD *client_fd = dynamic_cast<ClientFD *>(fd);
-					disconnect_client(*(client_fd->getClient()));
-					std::cerr << "client error!" << std::endl;
-					close(i);
-				}
-				else if (fd->getType() == RESOURCE_FDTYPE)
-				{
-					std::cerr << "resource error!" << std::endl;
-					Client *client = dynamic_cast<ResourceFD*>(fd)->getClient();
-
-					client->getResponse().makeErrorResponse(500, NULL);
-					MANAGER->deleteFromFDTable(i, fd, FD_RDWR);
-				}
-				else if (fd->getType() == PIPE_FDTYPE)
-				{
-					Client *client = dynamic_cast<ResourceFD*>(fd)->getClient();
-					std::cerr << "pipe error!" << std::endl;
-
-					client->getResponse().makeErrorResponse(500, NULL);
-					MANAGER->deleteFromFDTable(i, fd, FD_WRONLY);
 				}
 			}
 		}
+
 	}
 	return (true);
 }
@@ -387,7 +340,8 @@ int Webserver::prepareResponse(Client &client)
 	}
 
 	// Allowed Method인지 체크 - 405
-	if (std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
+	if (!location.getAllowMethods().empty() && 
+		std::find(location.getAllowMethods().begin(), location.getAllowMethods().end(), client.getRequest().getMethod()) == location.getAllowMethods().end())
 	{
 		client.getResponse().makeErrorResponse(405, &location);
 		return (405);
@@ -420,6 +374,14 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 
 	if (client.getRequest().getMethod() == "GET" || client.getRequest().getMethod() == "HEAD" || client.getRequest().getMethod() == "POST")
 	{
+		#ifdef BONUS
+			if (uri.find("/cookie_test") != std::string::npos)
+			{
+				client.getResponse().makeLogResponse();
+				return (LOG_RESPONSE);
+			}
+		#endif
+
 		if (uri[uri.length() - 1] != '/')
 			uri += '/';
 		
@@ -450,21 +412,24 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			}
 			else if (res == "Index of") //autoindex list up
 			{
-				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri());
+				client.getResponse().makeAutoIndexResponse(path, client.getRequest().getUri(), location);
 				return (AUTOINDEX_RESPONSE) ;
 			}
 			else
 				path = res;
-		} // 파일은 무조건 존재
+		}
 
 		client.getRequest().setPath(path);
-		
+
 		int get_fd = open(path.c_str(), O_RDONLY);
+		if (get_fd == -1)
+		{
+			client.getResponse().makeErrorResponse(500, &location);
+			return (500);
+		}
+
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client);
-		MANAGER->getFDTable().insert(std::pair<int, FDType*>(get_fd, file_fd));
-		setFDonTable(get_fd, FD_RDONLY);
-		if (this->fd_max < get_fd)
-			this->fd_max = get_fd;
+		setFDonTable(get_fd, FD_RDONLY, file_fd);
 	}
 	else if (client.getRequest().getMethod() == "PUT")
 	{
@@ -492,12 +457,15 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			return (400);
 		}
 		client.getRequest().setPath(path);
+
 		int put_fd = client.getServer()->createFileWithDirectory(path);
+		if (put_fd == -1)
+		{
+			client.getResponse().makeErrorResponse(500, &location);
+			return (500);
+		}
 		ResourceFD *file_fd = new ResourceFD(RESOURCE_FDTYPE, &client, client.getRequest().getRawBody());
-		MANAGER->getFDTable().insert(std::pair<int, FDType*>(put_fd, file_fd));
-		setFDonTable(put_fd, FD_WRONLY);
-		if (this->fd_max < put_fd)
-			this->fd_max = put_fd;
+		setFDonTable(put_fd, FD_WRONLY, file_fd);
 	}
 	else if (client.getRequest().getMethod() == "DELETE")
 	{
@@ -506,7 +474,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		if (uri == location.getLocationName())
 		{
 			client.getRequest().setPath(location.getRoot());
-			client.getServer()->cleanUpLocationRoot(client, location.getRoot());
+			client.getServer()->cleanUpLocationRoot(client, location.getRoot(), location);
 			client.getResponse().makeDeleteResponse(client.getRequest());
 			return (GENERAL_RESPONSE);
 		}
@@ -518,7 +486,7 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 			path.erase(--(path.end()));
 			if (ft_remove_directory(path.c_str()) == 1)
 			{
-				client.getResponse().makeErrorResponse(500, NULL);
+				client.getResponse().makeErrorResponse(500, &location);
 				return (500);
 			}
 		}
@@ -530,19 +498,43 @@ int Webserver::prepareGeneralResponse(Client &client, Location &location)
 		}
 		client.getResponse().makeDeleteResponse(client.getRequest());
 	}
+	else
+		client.getResponse().makeErrorResponse(501, &location);
 	return (GENERAL_RESPONSE);
 }
 
 void deleteServerResoureces(int signo)
 {
-	for (std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); iter++)
-	{
-		close(iter->first);
-		delete iter->second;
-	}
+	std::set<int> fds;
+
+	for (std::map<int, FDType*>::const_iterator iter = MANAGER->getFDTable().begin(); iter != MANAGER->getFDTable().end(); ++iter)
+		fds.insert(iter->first);
+
+	for (std::set<int>::const_iterator iter = fds.begin(); iter != fds.end(); ++iter)
+		clrFDonTable(*iter, FD_RDWR);
+
 	if (signo == SIGINT)
 		std::cout << "\n[webserv: Interrupt]" << std::endl;
 	if (signo == SIGKILL)
 		std::cout << "\n[webserv: Killed]" << std::endl;
 	exit(signo);
+}
+
+void *waitThread(void *wait_queue)
+{
+	std::queue<pid_t> *queue = static_cast<std::queue<pid_t>*>(wait_queue);
+	pid_t pid;
+	while (1)
+	{
+		usleep(1000);
+		if (!queue->empty())
+		{
+			pthread_mutex_lock(&MANAGER->getWaitQueueMutex());
+			pid = queue->front();
+			queue->pop();
+			pthread_mutex_unlock(&MANAGER->getWaitQueueMutex());
+			waitpid(pid, NULL, 0);
+		}
+	}
+	return (NULL);
 }

@@ -1,22 +1,32 @@
 #include "Client.hpp"
 #include "Manager.hpp"
 #include "Type.hpp"
+#include <sys/types.h>
+#include <sys/event.h>
 
 int FDType::getType()
 {
 	return (this->type);
 }
 
+FDType::~FDType() {}
+
+
 ServerFD::ServerFD(t_FDType type)
 {
 	this->type = type;
 }
+
+ServerFD::~ServerFD() {}
+
 
 ClientFD::ClientFD(t_FDType type, Client *client)
 {
 	this->type = type;
 	this->client = client;
 }
+
+ClientFD::~ClientFD() {}
 
 Client *ClientFD::getClient(void)
 {
@@ -48,6 +58,8 @@ ResourceFD::ResourceFD(t_FDType type, pid_t pid, Client *client)
 	this->data = NULL;
 	this->write_idx = 0;
 }
+
+ResourceFD::~ResourceFD() {}
 
 Client *ResourceFD::getClient(void)
 {
@@ -82,6 +94,8 @@ PipeFD::PipeFD(t_FDType type, pid_t pid, Client *client, const std::string &data
 	this->write_idx = 0;
 }
 
+PipeFD::~PipeFD() {}
+
 Client *PipeFD::getClient(void)
 {
 	return (this->client);
@@ -92,52 +106,59 @@ pid_t PipeFD::getPid(void)
 	return (this->pid);
 }
 
-int PipeFD::getFdRead(void)
-{
-	return (this->fd_read);
-}
-
 const std::string &PipeFD::getData()
 {
 	return (this->data);
 }
 
-int PipeFD::getWriteIdx()
+size_t PipeFD::getWriteIdx()
 {
 	return (this->write_idx);
 }
 
-void PipeFD::setWriteIdx(int write_idx)
+void PipeFD::setWriteIdx(size_t write_idx)
 {
 	this->write_idx = write_idx;
 }
 
-void PipeFD::setFdRead(int fd)
+
+
+
+void setFDonTable(int fd, t_fdset set, FDType *data)
 {
-	this->fd_read = fd;
-}
+	struct kevent event;
 
-
-
-
-void setFDonTable(int fd, t_fdset set)
-{
+	MANAGER->getFDTable().insert(std::pair<int, FDType*>(fd, data));
 	if (set == FD_RDONLY)
-		FT_FD_SET(fd, &(MANAGER->getReads()));
+	{
+		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
+		MANAGER->getEventList().push_back(event);
+	}
 	else if (set == FD_WRONLY)
-		FT_FD_SET(fd, &(MANAGER->getWrites()));
+	{
+		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
+		MANAGER->getEventList().push_back(event);
+	}
 	else if (set == FD_RDWR)
 	{
-		FT_FD_SET(fd, &(MANAGER->getReads()));
-		FT_FD_SET(fd, &(MANAGER->getWrites()));
+		EV_SET(&event, fd, EVFILT_READ, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
+		MANAGER->getEventList().push_back(event);
+		EV_SET(&event, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE, NULL, NULL, NULL);
+		MANAGER->getEventList().push_back(event);
+
 	}
-	FT_FD_SET(fd, &(MANAGER->getErrors()));
 }
 
 void clrFDonTable(int fd, t_fdset set)
 {
 	(void)set;
-	FT_FD_CLR(fd, &(MANAGER->getReads()));
-	FT_FD_CLR(fd, &(MANAGER->getWrites()));
-	FT_FD_CLR(fd, &(MANAGER->getErrors()));
+
+	std::map<int, FDType*>::iterator iter = MANAGER->getFDTable().find(fd);
+	if (iter != MANAGER->getFDTable().end())
+	{
+		delete iter->second;
+		iter->second = NULL;
+	}
+	MANAGER->getFDTable().erase(fd);
+	close(fd);
 }

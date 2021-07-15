@@ -73,9 +73,9 @@ const std::string&	Request::getHttpVersion(void) const
 	return (this->http_version);
 }
 
-std::map<std::string, std::string>&	Request::getHeaders(void) const
+std::multimap<std::string, std::string>&	Request::getHeaders(void)
 {
-	return (const_cast<std::map<std::string, std::string>& > (this->headers));
+	return (this->headers);
 }
 
 const	std::string&	Request::getRawHeader(void) const
@@ -116,9 +116,6 @@ void	Request::setPath(const std::string &path)
 {
 	this->path = path;
 }
-
-
-/////////////////////////// public func /////////////////////
 
 void	Request::initRequest(void)
 {
@@ -211,7 +208,7 @@ void	Request::makeRequestHeader(void)
 		std::string value = "";
 		if (temp.length() > (found + 1))
 			value = temp.substr(found + 1);
-		headers[key] = value;
+		this->headers.insert(std::pair<std::string, std::string>(key, value));
 	}
 
 	size_t pos = this->raw_request.find("\r\n\r\n");
@@ -235,7 +232,11 @@ bool	Request::bodyCheck(void)
 
 bool	Request::isComplete(void)
 {
-	std::size_t len = ft_atoi(this->headers["Content-Length"]);
+	std::multimap<std::string, std::string>::iterator iter = this->headers.find("Content-Length");
+
+	std::size_t len = 0;
+	if (iter !=	this->headers.end())
+		len = atoi(iter->second.c_str());
 
 	if (this->type == CONTENT_LENGTH && this->temp_body.length() >= len)
 	{

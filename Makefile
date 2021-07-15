@@ -1,59 +1,59 @@
-SRCNAME	=		\
-					main.cpp\
-					Client.cpp\
-					Location.cpp\
-					Manager.cpp\
-					Server.cpp\
-					Webserver.cpp\
-					Request.cpp\
-					Response.cpp\
-					Type.cpp\
-					CGI.cpp
+SRCNAME	= \
+	main.cpp\
+	Client.cpp\
+	Location.cpp\
+	Manager.cpp\
+	Server.cpp\
+	Webserver.cpp\
+	Request.cpp\
+	Response.cpp\
+	Type.cpp\
+	CGI.cpp\
+	utils.cpp
 
-SRCDIR		=		./srcs/
+SRCDIR = ./srcs/
 
-SRCS		=		${addprefix ${SRCDIR}, ${SRCNAME}}
+SRCS = ${addprefix ${SRCDIR}, ${SRCNAME}}
 
-INC		=		-I ./includes/ -I ./libft_cpp/
+INC = -I ./includes/
 
-NAME		=		webserv
+NAME = webserv
 
-LIB_NAME	=		libft.a
+CC = clang++
 
-CC			=		clang++
+ifdef WITH_BONUS
+	CFLAGS = -Wall -Wextra -Werror -std=c++98 -D BONUS ${INC}
+else
+	CFLAGS = -Wall -Wextra -Werror -std=c++98 ${INC}
+endif
 
-CF			=		-Wall -Wextra -Werror -std=c++98 ${INC} ${SRCS}
-DCF			=		-g ${SRCS}
+DCFLAGS = -g3 -fsanitize=address # -D BONUS
 
-${NAME}     :		$(SRCS)
-					make all -C "./libft_cpp"
-					cp libft_cpp/${LIB_NAME} ${LIB_NAME}
-					${CC} ${CF} ${LIB_NAME} -o ${NAME} 
+${NAME} : $(SRCS)
+	${CC} ${CFLAGS} ${SRCS} -o ${NAME}
 
-dbg		:
-					${CC} ${DCF} ${LIB_NAME} -o ${NAME}
-					lldb webserv -- configs/test.conf
-
-test		:
-					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
-					rm -rf ./tests/put_test/file_should_exist_after
-					rm -rf .res_*
-					./webserv configs/test.conf
+test:
+	${CC} ${DCFLAGS} ${SRCS} ${INC} -o ${NAME}
+	rm -rf ./tests/put_test/file_should_exist_after
+	./webserv configs/test.conf
 
 test_hyeonski:
-					${CC} ${DCF} ${LIB_NAME} ${INC} -o ${NAME}
-					rm -rf ./tests/put_test/file_should_exist_after
-					rm -rf .res_*
-					./webserv configs/test_hyeonski.conf
+	${CC} ${DCFLAGS} ${SRCS} ${INC} -o ${NAME}
+	rm -rf ./tests/put_test/file_should_exist_after
+	rm -rf .res_*
+	./webserv configs/test_hyeonski.conf
 
-fclean		:
-					make fclean -C "./libft_cpp"
-					rm -rf webserv.dSYM
-					rm -rf ${NAME}
-					rm -rf ${LIB_NAME}
+bonus:
+	make WITH_BONUS=1 all
 
-re			:		fclean all
+fclean:
+	rm -rf ./tests/put_test/file_should_exist_after
+	rm -rf ./tests/put_test/multiple_same
+	rm -rf webserv.dSYM
+	rm -rf ${NAME}
 
-all         :      	${NAME}
+re: fclean all
 
-.PHONY		:		fclean re test
+all: ${NAME}
+
+.PHONY: fclean re test

@@ -4,7 +4,7 @@
 # include <iostream>
 # include <vector>
 # include <map>
-# include "libft.hpp"
+# include "utils.hpp"
 
 # define CHUNKED 2
 # define CONTENT_LENGTH 1
@@ -23,7 +23,7 @@ class Request
 		std::string	method;
 		std::string	uri;
 		std::string	http_version;
-		std::map<std::string, std::string> headers;
+		std::multimap<std::string, std::string> headers;
 
 		std::string raw_header;
 		std::string	raw_body;
@@ -41,34 +41,34 @@ class Request
 		virtual ~Request(void){};
 		Request& operator=(const Request& src);
 
-		std::string&	getRawRequest(void);
-		const std::string&	getMethod(void) const;
-		const std::string&	getUri(void) const;
-		const std::string&	getHttpVersion(void) const;
-		std::map<std::string, std::string>&	getHeaders(void) const;
-		const	std::string&	getRawHeader(void) const;
-		const std::string&	getRawBody(void) const;
-		const std::string& getTempBody(void) const;
-		Client*	getClient(void);
+		std::string &getRawRequest(void);
+		const std::string &getMethod(void) const;
+		const std::string &getUri(void) const;
+		const std::string &getHttpVersion(void) const;
+		std::multimap<std::string, std::string> &getHeaders(void);
+		const std::string &getRawHeader(void) const;
+		const std::string &getRawBody(void) const;
+		const std::string &getTempBody(void) const;
+		Client *getClient(void);
 		std::string &getPath(void);
 
 		void setClient(Client *client);
 		void setPath(const std::string &path);
 		
 	public:
-		void	initRequest(void);
-		bool	tryMakeRequest(void);
+		void initRequest(void);
+		bool tryMakeRequest(void);
 
 	private:
-		void	makeStartLine(void);
-		void	makeRequestHeader(void);
+		void makeStartLine(void);
+		void makeRequestHeader(void);
 
-		void	parseMethod(std::string &start_line);
-		void	parseUri(std::string &start_line);
-		void	parseHttpVersion(std::string &start_line);
+		void parseMethod(std::string &start_line);
+		void parseUri(std::string &start_line);
+		void parseHttpVersion(std::string &start_line);
 
-		bool	bodyCheck(void);
-		bool	isComplete(void);		
+		bool bodyCheck(void);
+		bool isComplete(void);		
 };
 
 #endif

@@ -1,6 +1,11 @@
-#include "libft.hpp"
+#include "utils.hpp"
 #include "Manager.hpp"
 #include "Type.hpp"
+
+void handleSigpipe(int signo)
+{
+	(void)signo;
+}
 
 int	main(int argc, char **argv)
 {
@@ -8,14 +13,15 @@ int	main(int argc, char **argv)
 
 	if (MANAGER->parseConfig(argv[1]) == 0)
 		return (EXIT_FAILURE);
-	struct timeval timeout;
+	struct timespec timeout;
 	timeout.tv_sec = 5;
-	timeout.tv_usec = 0;
+	timeout.tv_nsec = 0;
 	try
 	{
 		signal(SIGINT, deleteServerResoureces);
 		signal(SIGKILL, deleteServerResoureces);
-		MANAGER->getWebserver().initServers(256);
+		signal(SIGPIPE, handleSigpipe);
+		MANAGER->getWebserver().initServers(1024);
 		MANAGER->getWebserver().run(timeout);
 	}
 	catch(const char *e)
