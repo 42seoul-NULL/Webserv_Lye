@@ -1,7 +1,5 @@
 # Webserv
 
-스끼다시 먹으러 갑시다
-
 ### HTTP/1.1 Webserver
 
 This is a HTTP server implemented with C++, using kqueue model.
