@@ -1,14 +1,15 @@
 # Webserv
 
-### HTTP/1.1 Webserver
+## Description
 
 This is a HTTP server implemented with C++, using kqueue model.
+This project is for webserv, the 42 inner circle project.
 
-- how to use
+### How to Use
 
-  - clone this repository
-  - `make all`
-  - `./webserv [config_file_path]`
+- clone this repository
+- `make all`
+- `./webserv [config_file_path]`
 
 - how to set server config file
 
@@ -51,13 +52,19 @@ This is a HTTP server implemented with C++, using kqueue model.
 
   - **All reserved words** except server_name, listen must be located in `location {}`
 
-- how to test
-  - functional test : `./cgi-bin/tester http://[address]:[port]`
-  - stress test(needs siege): `siege -R <(echo connection = keep-alive) -c[client_size] http://[address]:[port]`
 
-- etc)
-  - supports session management
-    - logging urls that the client had requested
-    - `make fclean && make bonus`
-    - `./webserv configs/test.conf`
-    - request GET /cookie_test
+
+### how to test
+
+- functional test : `./cgi-bin/tester http://[address]:[port]`
+- stress test(needs siege): `siege -R <(echo connection = keep-alive) -c[client_size] http://[address]:[port]`
+
+
+
+### Etc.
+
+- supports session management test
+  - logging urls that the client had requested
+  - `make fclean && make bonus`
+  - `./webserv configs/test.conf`
+  - request GET /cookie_test
